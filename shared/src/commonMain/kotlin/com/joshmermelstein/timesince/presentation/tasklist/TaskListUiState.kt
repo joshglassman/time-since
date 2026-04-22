@@ -1,0 +1,27 @@
+package com.joshmermelstein.timesince.presentation.tasklist
+
+import com.joshmermelstein.timesince.domain.model.Task
+import com.joshmermelstein.timesince.domain.model.TaskStatus
+import com.joshmermelstein.timesince.domain.model.remainingTime
+import com.joshmermelstein.timesince.domain.model.status
+import kotlin.time.Duration
+import kotlin.time.Instant
+
+data class TaskListUiState(
+    val isLoading: Boolean = true,
+    val tasks: List<TaskListItem> = emptyList(),
+)
+
+data class TaskListItem(
+    val id: String,
+    val name: String,
+    val status: TaskStatus,
+    val remaining: Duration,
+)
+
+internal fun Task.toListItem(now: Instant): TaskListItem = TaskListItem(
+    id = id,
+    name = name,
+    status = status(now),
+    remaining = remainingTime(now),
+)

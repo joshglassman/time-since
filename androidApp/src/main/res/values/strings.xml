@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Time Since</string>
+    <string name="notification_channel_overdue_name">Overdue tasks</string>
+    <string name="notification_channel_overdue_description">Persistent reminder when tasks are overdue</string>
+    <string name="notification_overdue_title_one">1 task overdue</string>
+    <string name="notification_overdue_title_many">%1$d tasks overdue</string>
+</resources>
