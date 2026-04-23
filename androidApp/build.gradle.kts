@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.multiplatform)
@@ -5,15 +7,26 @@ plugins {
 }
 
 android {
-    namespace = "com.joshmermelstein.timesince"
+    namespace = "com.scribbles.timesince"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.joshmermelstein.timesince"
+        applicationId = "com.scribbles.timesince"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        val webClientId = rootProject.file("local.properties")
+            .takeIf { it.exists() }
+            ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
+            ?.getProperty("WEB_CLIENT_ID")
+            .orEmpty()
+        buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -38,7 +51,6 @@ kotlin {
     jvmToolchain(25)
 }
 
-@Suppress("DEPRECATION")
 dependencies {
     implementation(project(":shared"))
     implementation(compose.material3)
@@ -60,4 +72,7 @@ dependencies {
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.play.services.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 }

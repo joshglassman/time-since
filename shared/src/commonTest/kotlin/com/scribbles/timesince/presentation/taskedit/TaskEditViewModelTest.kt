@@ -1,0 +1,154 @@
+package com.scribbles.timesince.presentation.taskedit
+
+import com.scribbles.timesince.domain.model.FrequencyUnit
+import com.scribbles.timesince.domain.usecase.BASE_TIME
+import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
+import com.scribbles.timesince.domain.usecase.FakeTaskRepository
+import com.scribbles.timesince.domain.usecase.TestClock
+import com.scribbles.timesince.domain.usecase.UpdateTaskUseCase
+import com.scribbles.timesince.domain.usecase.taskWith
+import com.scribbles.timesince.presentation.installMainDispatcher
+import com.scribbles.timesince.presentation.uninstallMainDispatcher
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+class TaskEditViewModelTest {
+
+    private val repository = FakeTaskRepository()
+    private val clock = TestClock(BASE_TIME)
+    private lateinit var viewModel: TaskEditViewModel
+
+    @BeforeTest
+    fun setUp() {
+        installMainDispatcher()
+        viewModel = TaskEditViewModel(
+            repository = repository,
+            createTask = CreateTaskUseCase(repository, clock),
+            updateTask = UpdateTaskUseCase(repository),
+        )
+    }
+
+    @AfterTest
+    fun tearDown() {
+        uninstallMainDispatcher()
+    }
+
+    @Test
+    fun loadNullProducesNewTaskState() = runTest {
+        viewModel.load(null)
+        val state = viewModel.state.value
+        assertTrue(state.isNew)
+        assertEquals("", state.name)
+        assertEquals("1", state.frequencyAmount)
+        assertEquals(FrequencyUnit.DAYS, state.frequencyUnit)
+        assertFalse(state.canSave)
+    }
+
+    @Test
+    fun loadExistingPopulatesState() = runTest {
+        repository.create(
+            taskWith(
+                id = "a",
+                name = "Existing",
+                frequencyAmount = 3,
+                frequencyUnit = FrequencyUnit.WEEKS,
+            )
+        )
+
+        viewModel.load("a")
+
+        val state = viewModel.state.value
+        assertFalse(state.isNew)
+        assertEquals("Existing", state.name)
+        assertEquals("3", state.frequencyAmount)
+        assertEquals(FrequencyUnit.WEEKS, state.frequencyUnit)
+    }
+
+    @Test
+    fun canSaveRequiresNameAndPositiveAmount() = runTest {
+        viewModel.load(null)
+        assertFalse(viewModel.state.value.canSave)
+
+        viewModel.onNameChanged("Read book")
+        assertTrue(viewModel.state.value.canSave)
+
+        viewModel.onFrequencyAmountChanged("0")
+        assertFalse(viewModel.state.value.canSave)
+
+        viewModel.onFrequencyAmountChanged("5")
+        assertTrue(viewModel.state.value.canSave)
+    }
+
+    @Test
+    fun frequencyAmountRejectsNonDigits() = runTest {
+        viewModel.load(null)
+        viewModel.onFrequencyAmountChanged("abc")
+        assertEquals("1", viewModel.state.value.frequencyAmount)
+
+        viewModel.onFrequencyAmountChanged("12")
+        assertEquals("12", viewModel.state.value.frequencyAmount)
+    }
+
+    @Test
+    fun saveCreatesNewTask() = runTest {
+        viewModel.load(null)
+        viewModel.onNameChanged("New task")
+        viewModel.onFrequencyAmountChanged("2")
+        viewModel.onFrequencyUnitChanged(FrequencyUnit.HOURS)
+
+        viewModel.onSave()
+
+        assertTrue(viewModel.state.value.saved)
+        val tasks = repository.observeAll().first()
+        assertTrue(tasks.any { it.name == "New task" })
+    }
+
+    @Test
+    fun saveUpdatesExistingTask() = runTest {
+        repository.create(
+            taskWith(
+                id = "a",
+                name = "Original",
+                frequencyAmount = 1,
+                frequencyUnit = FrequencyUnit.DAYS,
+            )
+        )
+
+        viewModel.load("a")
+        viewModel.onNameChanged("Updated")
+        viewModel.onFrequencyAmountChanged("4")
+        viewModel.onFrequencyUnitChanged(FrequencyUnit.HOURS)
+        viewModel.onSave()
+
+        assertTrue(viewModel.state.value.saved)
+        val task = repository.getById("a")
+        assertNotNull(task)
+        assertEquals("Updated", task.name)
+        assertEquals(4, task.frequency.amount)
+        assertEquals(FrequencyUnit.HOURS, task.frequency.unit)
+    }
+
+    @Test
+    fun saveTrimsWhitespaceFromName() = runTest {
+        viewModel.load(null)
+        viewModel.onNameChanged("  Trimmed  ")
+        viewModel.onSave()
+
+        val tasks = repository.observeAll().first()
+        assertTrue(tasks.any { it.name == "Trimmed" })
+    }
+
+    @Test
+    fun saveDoesNothingWhenInvalid() = runTest {
+        viewModel.load(null)
+        viewModel.onSave()
+        assertFalse(viewModel.state.value.saved)
+    }
+}

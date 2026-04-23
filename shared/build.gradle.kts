@@ -10,7 +10,7 @@ kotlin {
     jvmToolchain(25)
 
     android {
-        namespace = "com.joshmermelstein.timesince.shared"
+        namespace = "com.scribbles.timesince.shared"
         compileSdk = 36
         minSdk = 26
 
