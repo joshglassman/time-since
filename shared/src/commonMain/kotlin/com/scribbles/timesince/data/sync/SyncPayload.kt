@@ -1,5 +1,6 @@
 package com.scribbles.timesince.data.sync
 
+import com.scribbles.timesince.domain.model.DeletedTaskTombstone
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.Task
 import com.scribbles.timesince.domain.model.TaskFrequency
@@ -8,22 +9,32 @@ import kotlin.time.Instant
 
 /**
  * Wire format for syncing tasks to/from Google Drive.
- * Uses a last-write-wins strategy based on the embedded [syncedAt] timestamp.
+ *
+ * v2 adds per-task `updatedAt` (merge-resolution basis) and a `deletedTasks`
+ * tombstone list so deletions propagate across devices. A payload without
+ * `updatedAt` (v1 producer) parses with `updatedAt = lastCompletedAt`.
  */
 @Serializable
 data class SyncPayload(
-    val version: Int = 1,
+    val version: Int = 2,
     val syncedAt: String,
-    val tasks: List<TaskDto>,
+    val tasks: List<TaskDto> = emptyList(),
+    val deletedTasks: List<TombstoneDto> = emptyList(),
 ) {
     companion object {
-        fun from(tasks: List<Task>, now: Instant): SyncPayload = SyncPayload(
+        fun from(
+            tasks: List<Task>,
+            tombstones: List<DeletedTaskTombstone>,
+            now: Instant,
+        ): SyncPayload = SyncPayload(
             syncedAt = now.toString(),
             tasks = tasks.map { TaskDto.from(it) },
+            deletedTasks = tombstones.map { TombstoneDto.from(it) },
         )
     }
 
     fun toTasks(): List<Task> = tasks.mapNotNull { it.toTask() }
+    fun toTombstones(): List<DeletedTaskTombstone> = deletedTasks.mapNotNull { it.toTombstone() }
 }
 
 @Serializable
@@ -34,6 +45,7 @@ data class TaskDto(
     val frequencyAmount: Int,
     val frequencyUnit: String,
     val createdAt: String,
+    val updatedAt: String? = null,
 ) {
     companion object {
         fun from(task: Task): TaskDto = TaskDto(
@@ -43,18 +55,40 @@ data class TaskDto(
             frequencyAmount = task.frequency.amount,
             frequencyUnit = task.frequency.unit.name,
             createdAt = task.createdAt.toString(),
+            updatedAt = task.updatedAt.toString(),
         )
     }
 
     fun toTask(): Task? = try {
         val unit = FrequencyUnit.valueOf(frequencyUnit)
+        val lastCompleted = Instant.parse(lastCompletedAt)
         Task(
             id = id,
             name = name,
-            lastCompletedAt = Instant.parse(lastCompletedAt),
+            lastCompletedAt = lastCompleted,
             frequency = TaskFrequency(frequencyAmount, unit),
             createdAt = Instant.parse(createdAt),
+            updatedAt = updatedAt?.let { Instant.parse(it) } ?: lastCompleted,
         )
+    } catch (_: Exception) {
+        null
+    }
+}
+
+@Serializable
+data class TombstoneDto(
+    val id: String,
+    val deletedAt: String,
+) {
+    companion object {
+        fun from(tombstone: DeletedTaskTombstone): TombstoneDto = TombstoneDto(
+            id = tombstone.id,
+            deletedAt = tombstone.deletedAt.toString(),
+        )
+    }
+
+    fun toTombstone(): DeletedTaskTombstone? = try {
+        DeletedTaskTombstone(id = id, deletedAt = Instant.parse(deletedAt))
     } catch (_: Exception) {
         null
     }

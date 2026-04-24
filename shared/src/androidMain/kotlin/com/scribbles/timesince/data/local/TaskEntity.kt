@@ -11,4 +11,5 @@ data class TaskEntity(
     val frequencyAmount: Int,
     val frequencyUnit: String,
     val createdAtEpochMillis: Long,
+    val updatedAtEpochMillis: Long,
 )

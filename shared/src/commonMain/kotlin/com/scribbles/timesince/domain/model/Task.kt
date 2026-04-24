@@ -10,12 +10,16 @@ data class Task(
     val lastCompletedAt: Instant,
     val frequency: TaskFrequency,
     val createdAt: Instant,
+    val updatedAt: Instant = lastCompletedAt,
 )
 
 fun Task.deadline(): Instant = lastCompletedAt + frequency.toDuration()
 
 fun Task.remainingTime(now: Instant = Clock.System.now()): Duration =
     deadline() - now
+
+fun Task.elapsedSinceCompleted(now: Instant = Clock.System.now()): Duration =
+    now - lastCompletedAt
 
 fun Task.status(now: Instant = Clock.System.now()): TaskStatus {
     val remaining = remainingTime(now)

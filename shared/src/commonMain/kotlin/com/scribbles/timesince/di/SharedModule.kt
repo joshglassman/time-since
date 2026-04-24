@@ -19,7 +19,7 @@ import kotlin.time.Clock
  */
 val sharedModule: Module = module {
     single<Clock> { Clock.System }
-    single<TaskRepository> { TaskRepositoryImpl(get()) }
+    single<TaskRepository> { TaskRepositoryImpl(get(), get()) }
 
     factory { GetSortedTasksUseCase(get(), get()) }
     factory { GetOverdueTasksUseCase(get(), get()) }

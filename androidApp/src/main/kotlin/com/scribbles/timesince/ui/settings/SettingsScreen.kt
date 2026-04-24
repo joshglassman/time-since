@@ -11,13 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -54,7 +52,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val message by viewModel.message.collectAsStateWithLifecycle()
-    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     var isSignedIn by remember { mutableStateOf(authHelper.isSignedIn) }
     var accountEmail by remember { mutableStateOf(authHelper.signedInEmail) }
 
@@ -159,36 +156,12 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = { viewModel.syncUpload() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isSyncing,
-                ) {
-                    if (isSyncing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text("Upload to Drive")
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { viewModel.syncDownload() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isSyncing,
-                ) {
-                    if (isSyncing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text("Download from Drive")
-                    }
-                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Your tasks sync automatically when you open the app and when you make changes.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = {
@@ -205,7 +178,7 @@ fun SettingsScreen(
                 }
             } else {
                 Text(
-                    text = "Sign in with Google to back up your tasks to Drive.",
+                    text = "Sign in with Google to back up your tasks to Drive and keep them in sync across devices.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

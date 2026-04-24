@@ -3,6 +3,8 @@ package com.scribbles.timesince.sync
 import com.scribbles.timesince.data.sync.SyncDataSource
 import com.scribbles.timesince.data.sync.SyncPayload
 import com.scribbles.timesince.data.sync.SyncResult
+import com.scribbles.timesince.data.sync.SyncSnapshot
+import com.scribbles.timesince.domain.model.DeletedTaskTombstone
 import com.scribbles.timesince.domain.model.Task
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,10 +25,13 @@ class GoogleDriveSyncDataSource(
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
-    override suspend fun upload(tasks: List<Task>): SyncResult = withContext(Dispatchers.IO) {
+    override suspend fun upload(
+        tasks: List<Task>,
+        tombstones: List<DeletedTaskTombstone>,
+    ): SyncResult = withContext(Dispatchers.IO) {
         val token = tokenProvider() ?: return@withContext SyncResult.Error("Not signed in.")
         try {
-            val payload = SyncPayload.from(tasks, clock.now())
+            val payload = SyncPayload.from(tasks, tombstones, clock.now())
             val body = json.encodeToString(SyncPayload.serializer(), payload)
 
             val fileId = findSyncFileId(token)
@@ -41,18 +46,24 @@ class GoogleDriveSyncDataSource(
         }
     }
 
-    override suspend fun download(): Pair<SyncResult, List<Task>> = withContext(Dispatchers.IO) {
-        val token = tokenProvider() ?: return@withContext Pair(SyncResult.Error("Not signed in."), emptyList())
+    override suspend fun download(): Pair<SyncResult, SyncSnapshot> = withContext(Dispatchers.IO) {
+        val token = tokenProvider() ?: return@withContext Pair(
+            SyncResult.Error("Not signed in."),
+            SyncSnapshot(),
+        )
         try {
             val fileId = findSyncFileId(token)
-                ?: return@withContext Pair(SyncResult.Success(0), emptyList())
+                ?: return@withContext Pair(SyncResult.Success(0), SyncSnapshot())
 
             val content = downloadFile(token, fileId)
             val payload = json.decodeFromString(SyncPayload.serializer(), content)
-            val tasks = payload.toTasks()
-            Pair(SyncResult.Success(tasks.size), tasks)
+            val snapshot = SyncSnapshot(
+                tasks = payload.toTasks(),
+                tombstones = payload.toTombstones(),
+            )
+            Pair(SyncResult.Success(snapshot.tasks.size), snapshot)
         } catch (e: Exception) {
-            Pair(SyncResult.Error(e.message ?: "Download failed."), emptyList())
+            Pair(SyncResult.Error(e.message ?: "Download failed."), SyncSnapshot())
         }
     }
 

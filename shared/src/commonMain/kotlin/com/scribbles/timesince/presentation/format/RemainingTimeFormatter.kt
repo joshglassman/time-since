@@ -18,28 +18,31 @@ object RemainingTimeFormatter {
     fun format(remaining: Duration): String {
         if (remaining == Duration.ZERO) return "now"
         if (remaining.isNegative()) {
-            return "${formatPositive(-remaining)} overdue"
+            return "${formatShort(-remaining)} overdue"
         }
-        return formatPositive(remaining)
+        return formatShort(remaining)
     }
+}
 
-    private fun formatPositive(duration: Duration): String {
-        // Round to at least 1 minute so very small values don't display as "0m"
-        val rounded = if (duration < 1.minutes) 1.minutes else duration
+/**
+ * Formats a non-negative duration in the compact `d/h/m` style used across the app
+ * (e.g. `"3d 4h"`, `"5h 30m"`, `"45m"`). Values under one minute round up to `"1m"`.
+ */
+internal fun formatShort(duration: Duration): String {
+    val rounded = if (duration < 1.minutes) 1.minutes else duration
 
-        val totalDays = rounded.inWholeDays
-        val totalHours = rounded.inWholeHours
-        val totalMinutes = rounded.inWholeMinutes
+    val totalDays = rounded.inWholeDays
+    val totalHours = rounded.inWholeHours
+    val totalMinutes = rounded.inWholeMinutes
 
-        val hourPart = totalHours - totalDays * 24
-        val minutePart = totalMinutes - totalHours * 60
+    val hourPart = totalHours - totalDays * 24
+    val minutePart = totalMinutes - totalHours * 60
 
-        return when {
-            totalDays > 0 && hourPart > 0 -> "${totalDays}d ${hourPart}h"
-            totalDays > 0 -> "${totalDays}d"
-            totalHours > 0 && minutePart > 0 -> "${totalHours}h ${minutePart}m"
-            totalHours > 0 -> "${totalHours}h"
-            else -> "${minutePart}m"
-        }
+    return when {
+        totalDays > 0 && hourPart > 0 -> "${totalDays}d ${hourPart}h"
+        totalDays > 0 -> "${totalDays}d"
+        totalHours > 0 && minutePart > 0 -> "${totalHours}h ${minutePart}m"
+        totalHours > 0 -> "${totalHours}h"
+        else -> "${minutePart}m"
     }
 }

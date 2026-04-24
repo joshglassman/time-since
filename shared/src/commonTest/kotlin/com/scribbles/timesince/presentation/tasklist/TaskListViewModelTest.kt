@@ -76,8 +76,18 @@ class TaskListViewModelTest {
             }
             assertEquals(1, current.tasks.size)
             assertEquals(TaskStatus.OVERDUE, current.tasks[0].status)
-            assertTrue(current.tasks[0].remaining.isNegative())
+            assertTrue(current.tasks[0].elapsed > current.tasks[0].frequency.toDuration())
             cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun onTaskCompletedEmitsEvent() = runTest {
+        repository.create(taskWith(id = "a", frequencyAmount = 1))
+
+        viewModel.completedTaskEvents.test {
+            viewModel.onTaskCompleted("a")
+            assertEquals("a", awaitItem())
         }
     }
 

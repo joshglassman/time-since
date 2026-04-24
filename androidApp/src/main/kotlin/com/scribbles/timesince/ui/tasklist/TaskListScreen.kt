@@ -1,6 +1,14 @@
 package com.scribbles.timesince.ui.tasklist
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,8 +26,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -35,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,13 +57,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.scribbles.timesince.domain.model.TaskStatus
-import com.scribbles.timesince.presentation.format.RemainingTimeFormatter
+import com.scribbles.timesince.presentation.format.TimeSinceFormatter
 import com.scribbles.timesince.presentation.tasklist.TaskListItem
 import com.scribbles.timesince.presentation.tasklist.TaskListUiState
 import com.scribbles.timesince.presentation.tasklist.TaskListViewModel
 import com.scribbles.timesince.ui.theme.statusDueSoon
 import com.scribbles.timesince.ui.theme.statusOk
 import com.scribbles.timesince.ui.theme.statusOverdue
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +77,15 @@ fun TaskListScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var taskToDelete by remember { mutableStateOf<TaskListItem?>(null) }
+    var flashTick by remember { mutableStateOf(0) }
+    var flashTaskId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.completedTaskEvents.collect { id ->
+            flashTaskId = id
+            flashTick += 1
+        }
+    }
 
     taskToDelete?.let { task ->
         AlertDialog(
@@ -111,6 +130,8 @@ fun TaskListScreen(
             onCompleteTask = viewModel::onTaskCompleted,
             onEditTask = onEditTask,
             onDeleteTask = { task -> taskToDelete = task },
+            flashTaskId = flashTaskId,
+            flashTick = flashTick,
             contentPadding = padding,
         )
     }
@@ -122,6 +143,8 @@ private fun TaskListContent(
     onCompleteTask: (String) -> Unit,
     onEditTask: (String) -> Unit,
     onDeleteTask: (TaskListItem) -> Unit,
+    flashTaskId: String?,
+    flashTick: Int,
     contentPadding: PaddingValues,
 ) {
     when {
@@ -143,7 +166,7 @@ private fun TaskListContent(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "\u23F0",
+                    text = "⏰",
                     style = MaterialTheme.typography.displayLarge,
                 )
                 Spacer(Modifier.height(16.dp))
@@ -153,7 +176,7 @@ private fun TaskListContent(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Tap + to add your first task",
+                    text = "Long-press a task to mark it complete.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -176,65 +199,107 @@ private fun TaskListContent(
                     onComplete = { onCompleteTask(task.id) },
                     onEdit = { onEditTask(task.id) },
                     onDelete = { onDeleteTask(task) },
+                    flashTick = if (flashTaskId == task.id) flashTick else 0,
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TaskCard(
     task: TaskListItem,
     onComplete: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    flashTick: Int,
 ) {
     val statusLabel = when (task.status) {
         TaskStatus.OK -> "on track"
         TaskStatus.DUE_SOON -> "due soon"
         TaskStatus.OVERDUE -> "overdue"
     }
+    val displayText = TimeSinceFormatter.format(task.elapsed, task.frequency)
+
+    var showCheck by remember { mutableStateOf(false) }
+    LaunchedEffect(flashTick) {
+        if (flashTick > 0) {
+            showCheck = true
+            delay(700)
+            showCheck = false
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .semantics {
-                contentDescription = "${task.name}, ${RemainingTimeFormatter.format(task.remaining)}, $statusLabel. Tap to mark complete."
-            },
-        onClick = onComplete,
+                contentDescription = "${task.name}, $displayText, $statusLabel. " +
+                    "Tap to edit. Long-press to mark complete."
+            }
+            .combinedClickable(
+                onClick = onEdit,
+                onLongClick = onComplete,
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StatusDot(task.status)
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = task.name,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = RemainingTimeFormatter.format(task.remaining),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colorForStatus(task.status),
-                )
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StatusDot(task.status)
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = task.name,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorForStatus(task.status),
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete ${task.name}",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit ${task.name}")
-            }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete ${task.name}",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+
+            CheckFlashOverlay(
+                visible = showCheck,
+                modifier = Modifier.align(Alignment.Center),
+            )
         }
+    }
+}
+
+@Composable
+private fun CheckFlashOverlay(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = scaleIn(animationSpec = tween(200)) + fadeIn(animationSpec = tween(200)),
+        exit = scaleOut(animationSpec = tween(300)) + fadeOut(animationSpec = tween(300)),
+    ) {
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = null,
+            tint = statusOk,
+            modifier = Modifier.size(56.dp),
+        )
     }
 }
 

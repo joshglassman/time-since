@@ -9,5 +9,7 @@ object TaskDatabaseFactory {
             context.applicationContext,
             TaskDatabase::class.java,
             "time-since.db",
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
 }

@@ -1,6 +1,7 @@
 package com.scribbles.timesince.presentation.taskedit
 
 import com.scribbles.timesince.domain.model.FrequencyUnit
+import kotlin.time.Instant
 
 data class TaskEditUiState(
     val isLoading: Boolean = false,
@@ -8,6 +9,7 @@ data class TaskEditUiState(
     val name: String = "",
     val frequencyAmount: String = "1",
     val frequencyUnit: FrequencyUnit = FrequencyUnit.DAYS,
+    val lastCompletedAt: Instant? = null,
     val saved: Boolean = false,
 ) {
     val canSave: Boolean

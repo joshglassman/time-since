@@ -151,4 +151,20 @@ class TaskEditViewModelTest {
         viewModel.onSave()
         assertFalse(viewModel.state.value.saved)
     }
+
+    @Test
+    fun lastCompletedAtChangeIsPersistedOnSave() = runTest {
+        repository.create(
+            taskWith(id = "a", name = "T", frequencyAmount = 1, lastCompletedAt = BASE_TIME),
+        )
+
+        viewModel.load("a")
+        val newTime = BASE_TIME - kotlin.time.Duration.parseIsoString("PT6H")
+        viewModel.onLastCompletedAtChanged(newTime)
+        viewModel.onSave()
+
+        val stored = repository.getById("a")
+        assertNotNull(stored)
+        assertEquals(newTime, stored.lastCompletedAt)
+    }
 }

@@ -1,5 +1,6 @@
 package com.scribbles.timesince.data.sync
 
+import com.scribbles.timesince.domain.model.DeletedTaskTombstone
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.Task
 import com.scribbles.timesince.domain.model.TaskFrequency
@@ -19,6 +20,7 @@ class SyncPayloadTest {
             lastCompletedAt = Instant.parse("2026-04-08T10:30:00Z"),
             frequency = TaskFrequency(3, FrequencyUnit.DAYS),
             createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+            updatedAt = Instant.parse("2026-04-08T10:30:00Z"),
         ),
         Task(
             id = "id-2",
@@ -26,6 +28,7 @@ class SyncPayloadTest {
             lastCompletedAt = Instant.parse("2026-01-15T09:00:00Z"),
             frequency = TaskFrequency(3, FrequencyUnit.MONTHS),
             createdAt = Instant.parse("2025-12-01T00:00:00Z"),
+            updatedAt = Instant.parse("2026-01-15T09:00:00Z"),
         ),
     )
 
@@ -33,7 +36,7 @@ class SyncPayloadTest {
 
     @Test
     fun roundTripPreservesAllFields() {
-        val payload = SyncPayload.from(sample, syncTime)
+        val payload = SyncPayload.from(sample, emptyList(), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(sample, decoded.toTasks())
@@ -41,7 +44,7 @@ class SyncPayloadTest {
 
     @Test
     fun emptyTaskListRoundTrips() {
-        val payload = SyncPayload.from(emptyList(), syncTime)
+        val payload = SyncPayload.from(emptyList(), emptyList(), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(emptyList(), decoded.toTasks())
@@ -77,7 +80,7 @@ class SyncPayloadTest {
 
     @Test
     fun syncedAtTimestampIsPreserved() {
-        val payload = SyncPayload.from(sample, syncTime)
+        val payload = SyncPayload.from(sample, emptyList(), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(syncTime.toString(), decoded.syncedAt)
@@ -92,11 +95,46 @@ class SyncPayloadTest {
                 lastCompletedAt = syncTime,
                 frequency = TaskFrequency(1, unit),
                 createdAt = syncTime,
+                updatedAt = syncTime,
             )
-            val payload = SyncPayload.from(listOf(task), syncTime)
+            val payload = SyncPayload.from(listOf(task), emptyList(), syncTime)
             val encoded = json.encodeToString(SyncPayload.serializer(), payload)
             val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
             assertEquals(listOf(task), decoded.toTasks())
         }
+    }
+
+    @Test
+    fun v1PayloadWithoutUpdatedAtFallsBackToLastCompleted() {
+        val raw = """
+            {
+              "version": 1,
+              "syncedAt": "${syncTime}",
+              "tasks": [
+                {
+                  "id": "id-1",
+                  "name": "Legacy",
+                  "lastCompletedAt": "2026-04-08T10:30:00Z",
+                  "frequencyAmount": 2,
+                  "frequencyUnit": "DAYS",
+                  "createdAt": "2026-01-01T00:00:00Z"
+                }
+              ]
+            }
+        """.trimIndent()
+        val decoded = json.decodeFromString(SyncPayload.serializer(), raw)
+        val task = decoded.toTasks().single()
+        assertEquals(Instant.parse("2026-04-08T10:30:00Z"), task.updatedAt)
+    }
+
+    @Test
+    fun tombstonesRoundTrip() {
+        val tombstones = listOf(
+            DeletedTaskTombstone("id-gone", Instant.parse("2026-04-09T09:00:00Z")),
+        )
+        val payload = SyncPayload.from(sample, tombstones, syncTime)
+        val encoded = json.encodeToString(SyncPayload.serializer(), payload)
+        val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
+        assertEquals(tombstones, decoded.toTombstones())
     }
 }

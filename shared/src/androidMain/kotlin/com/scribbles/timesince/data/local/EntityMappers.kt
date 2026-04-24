@@ -1,5 +1,6 @@
 package com.scribbles.timesince.data.local
 
+import com.scribbles.timesince.domain.model.DeletedTaskTombstone
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.Task
 import com.scribbles.timesince.domain.model.TaskFrequency
@@ -14,6 +15,7 @@ fun TaskEntity.toDomain(): Task = Task(
         unit = FrequencyUnit.valueOf(frequencyUnit),
     ),
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
+    updatedAt = Instant.fromEpochMilliseconds(updatedAtEpochMillis),
 )
 
 fun Task.toEntity(): TaskEntity = TaskEntity(
@@ -23,4 +25,15 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
     frequencyAmount = frequency.amount,
     frequencyUnit = frequency.unit.name,
     createdAtEpochMillis = createdAt.toEpochMilliseconds(),
+    updatedAtEpochMillis = updatedAt.toEpochMilliseconds(),
+)
+
+fun DeletedTaskEntity.toDomain(): DeletedTaskTombstone = DeletedTaskTombstone(
+    id = id,
+    deletedAt = Instant.fromEpochMilliseconds(deletedAtEpochMillis),
+)
+
+fun DeletedTaskTombstone.toEntity(): DeletedTaskEntity = DeletedTaskEntity(
+    id = id,
+    deletedAtEpochMillis = deletedAt.toEpochMilliseconds(),
 )

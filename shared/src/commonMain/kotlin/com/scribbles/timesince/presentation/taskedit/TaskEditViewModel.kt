@@ -2,6 +2,7 @@ package com.scribbles.timesince.presentation.taskedit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.scribbles.timesince.data.sync.SyncCoordinator
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.TaskFrequency
 import com.scribbles.timesince.domain.repository.TaskRepository
@@ -12,11 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Instant
 
 class TaskEditViewModel(
     private val repository: TaskRepository,
     private val createTask: CreateTaskUseCase,
     private val updateTask: UpdateTaskUseCase,
+    private val syncCoordinator: SyncCoordinator? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TaskEditUiState())
@@ -43,6 +46,7 @@ class TaskEditViewModel(
                     name = task.name,
                     frequencyAmount = task.frequency.amount.toString(),
                     frequencyUnit = task.frequency.unit,
+                    lastCompletedAt = task.lastCompletedAt,
                 )
             }
         }
@@ -62,6 +66,10 @@ class TaskEditViewModel(
         _state.update { it.copy(frequencyUnit = unit) }
     }
 
+    fun onLastCompletedAtChanged(instant: Instant) {
+        _state.update { it.copy(lastCompletedAt = instant) }
+    }
+
     fun onSave() {
         val current = _state.value
         if (!current.canSave) return
@@ -75,8 +83,15 @@ class TaskEditViewModel(
                 createTask(current.name.trim(), frequency)
             } else {
                 val existing = repository.getById(id) ?: return@launch
-                updateTask(existing.copy(name = current.name.trim(), frequency = frequency))
+                updateTask(
+                    existing.copy(
+                        name = current.name.trim(),
+                        frequency = frequency,
+                        lastCompletedAt = current.lastCompletedAt ?: existing.lastCompletedAt,
+                    ),
+                )
             }
+            syncCoordinator?.requestSync()
             _state.update { it.copy(saved = true) }
         }
     }
