@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <g stroke="#7287fd" fill="none" stroke-width="4" stroke-linecap="round">
+    <path d="M 33.8147289238,70.9374535152 a 26.35,26.35 0 1 0 -5.26687444653,-10.1175716768" />
+    <path d="M 33.8147289238,70.9374535152 L 41.4647289238,70.9374535152" />
+    <path d="M 33.8147289238,70.9374535152 L 33.8147289238,78.5874535152" />
+  </g>
+
+  <g stroke="#7287fd" stroke-width="3" stroke-linecap="round">
+    <line x1="54" y1="27.65" x2="54" y2="31.9" />
+    <line x1="27.65" y1="54" x2="31.9" y2="54" />
+    <line x1="54" y1="80.35" x2="54" y2="76.1" />
+    <line x1="80.35" y1="54" x2="76.1" y2="54" />
+  </g>
+
+  <g stroke="#44b040" stroke-width="4" stroke-linecap="round">
+    <path d="M 54 54 L 44.65 46.35" />
+    <path d="M 54 54 L 65.7 39.6" />
+  </g>
+</svg>

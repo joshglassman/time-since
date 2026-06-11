@@ -1,0 +1,115 @@
+<svg width="400" height="48" viewBox="0 0 400 48" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0.00%" stop-color="#01ff01"/>
+      <stop offset="1.00%" stop-color="#3ef61b"/>
+      <stop offset="2.00%" stop-color="#50f51b"/>
+      <stop offset="3.00%" stop-color="#5ef31b"/>
+      <stop offset="4.00%" stop-color="#6af21b"/>
+      <stop offset="5.00%" stop-color="#74f01b"/>
+      <stop offset="6.00%" stop-color="#7cef1b"/>
+      <stop offset="7.00%" stop-color="#84ee1a"/>
+      <stop offset="8.00%" stop-color="#8aec1a"/>
+      <stop offset="9.00%" stop-color="#90eb1a"/>
+      <stop offset="10.00%" stop-color="#96ea1a"/>
+      <stop offset="11.00%" stop-color="#9be91a"/>
+      <stop offset="12.00%" stop-color="#a0e71a"/>
+      <stop offset="13.00%" stop-color="#a5e61a"/>
+      <stop offset="14.00%" stop-color="#a9e51a"/>
+      <stop offset="15.00%" stop-color="#ade41a"/>
+      <stop offset="16.00%" stop-color="#b1e31a"/>
+      <stop offset="17.00%" stop-color="#b5e21a"/>
+      <stop offset="18.00%" stop-color="#b8e11a"/>
+      <stop offset="19.00%" stop-color="#bbe01a"/>
+      <stop offset="20.00%" stop-color="#bfdf1a"/>
+      <stop offset="21.00%" stop-color="#c2de1a"/>
+      <stop offset="22.00%" stop-color="#c5dd1a"/>
+      <stop offset="23.00%" stop-color="#c7dc1a"/>
+      <stop offset="24.00%" stop-color="#cadb1a"/>
+      <stop offset="25.00%" stop-color="#cdda1a"/>
+      <stop offset="26.00%" stop-color="#cfd91a"/>
+      <stop offset="27.00%" stop-color="#d2d81a"/>
+      <stop offset="28.00%" stop-color="#d4d71a"/>
+      <stop offset="29.00%" stop-color="#d7d61a"/>
+      <stop offset="30.00%" stop-color="#d9d61a"/>
+      <stop offset="31.00%" stop-color="#dbd51a"/>
+      <stop offset="32.00%" stop-color="#ddd41a"/>
+      <stop offset="33.00%" stop-color="#dfd31a"/>
+      <stop offset="34.00%" stop-color="#e2d21a"/>
+      <stop offset="35.00%" stop-color="#e4d11a"/>
+      <stop offset="36.00%" stop-color="#e6d01a"/>
+      <stop offset="37.00%" stop-color="#e8cf1a"/>
+      <stop offset="38.00%" stop-color="#e9cf1a"/>
+      <stop offset="39.00%" stop-color="#ebce1a"/>
+      <stop offset="40.00%" stop-color="#edcd1a"/>
+      <stop offset="41.00%" stop-color="#efcc1a"/>
+      <stop offset="42.00%" stop-color="#f1cb1a"/>
+      <stop offset="43.00%" stop-color="#f3ca1a"/>
+      <stop offset="44.00%" stop-color="#f5c91a"/>
+      <stop offset="45.00%" stop-color="#f6c81a"/>
+      <stop offset="46.00%" stop-color="#f8c81a"/>
+      <stop offset="47.00%" stop-color="#fac71a"/>
+      <stop offset="48.00%" stop-color="#fcc61a"/>
+      <stop offset="49.00%" stop-color="#fdc51a"/>
+      <stop offset="50.00%" stop-color="#ffc41a"/>
+      <stop offset="51.00%" stop-color="#ffc216"/>
+      <stop offset="52.00%" stop-color="#ffbf10"/>
+      <stop offset="53.00%" stop-color="#ffbc09"/>
+      <stop offset="54.00%" stop-color="#ffba01"/>
+      <stop offset="55.00%" stop-color="#ffb91a"/>
+      <stop offset="56.00%" stop-color="#ffb71e"/>
+      <stop offset="57.00%" stop-color="#ffb51a"/>
+      <stop offset="58.00%" stop-color="#ffb216"/>
+      <stop offset="59.00%" stop-color="#ffb011"/>
+      <stop offset="60.00%" stop-color="#ffad0c"/>
+      <stop offset="61.00%" stop-color="#ffab04"/>
+      <stop offset="62.00%" stop-color="#ffa90a"/>
+      <stop offset="63.00%" stop-color="#ffa91e"/>
+      <stop offset="64.00%" stop-color="#ffa61c"/>
+      <stop offset="65.00%" stop-color="#ffa418"/>
+      <stop offset="66.00%" stop-color="#ffa114"/>
+      <stop offset="67.00%" stop-color="#ff9e0f"/>
+      <stop offset="68.00%" stop-color="#ff9c09"/>
+      <stop offset="69.00%" stop-color="#ff9903"/>
+      <stop offset="70.00%" stop-color="#ff980e"/>
+      <stop offset="71.00%" stop-color="#ff971d"/>
+      <stop offset="72.00%" stop-color="#ff951a"/>
+      <stop offset="73.00%" stop-color="#ff9216"/>
+      <stop offset="74.00%" stop-color="#ff8f12"/>
+      <stop offset="75.00%" stop-color="#ff8c0d"/>
+      <stop offset="76.00%" stop-color="#ff8907"/>
+      <stop offset="77.00%" stop-color="#ff8601"/>
+      <stop offset="78.00%" stop-color="#ff8512"/>
+      <stop offset="79.00%" stop-color="#ff841b"/>
+      <stop offset="80.00%" stop-color="#ff8117"/>
+      <stop offset="81.00%" stop-color="#ff7d13"/>
+      <stop offset="82.00%" stop-color="#ff7a0f"/>
+      <stop offset="83.00%" stop-color="#ff7608"/>
+      <stop offset="84.00%" stop-color="#ff7202"/>
+      <stop offset="85.00%" stop-color="#ff700d"/>
+      <stop offset="86.00%" stop-color="#ff701a"/>
+      <stop offset="87.00%" stop-color="#ff6c16"/>
+      <stop offset="88.00%" stop-color="#ff6712"/>
+      <stop offset="89.00%" stop-color="#ff620c"/>
+      <stop offset="90.00%" stop-color="#ff5d05"/>
+      <stop offset="91.00%" stop-color="#ff5804"/>
+      <stop offset="92.00%" stop-color="#ff5814"/>
+      <stop offset="93.00%" stop-color="#ff5416"/>
+      <stop offset="94.00%" stop-color="#ff4d11"/>
+      <stop offset="95.00%" stop-color="#ff450a"/>
+      <stop offset="96.00%" stop-color="#ff3c03"/>
+      <stop offset="97.00%" stop-color="#ff370b"/>
+      <stop offset="98.00%" stop-color="#ff3516"/>
+      <stop offset="99.00%" stop-color="#ff2811"/>
+      <stop offset="100.00%" stop-color="#ff0101"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <!-- Set width = fillPct / 100 * 400 -->
+      <rect id="clipRect" x="0" y="0" width="300" height="48"/>
+    </clipPath>
+  </defs>
+  <rect x="1" y="1" width="398" height="46" rx="23" ry="23"
+        fill="url(#g)" clip-path="url(#clip)"/>
+  <rect x="1" y="1" width="398" height="46" rx="23" ry="23"
+        fill="none" stroke="#000" stroke-width="2"/>
+</svg>

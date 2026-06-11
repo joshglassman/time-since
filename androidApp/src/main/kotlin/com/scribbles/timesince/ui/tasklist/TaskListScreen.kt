@@ -221,6 +221,7 @@ private fun TaskCard(
         TaskStatus.OVERDUE -> "overdue"
     }
     val displayText = TimeSinceFormatter.format(task.elapsed, task.frequency)
+    val fraction = (task.elapsed / task.frequency.toDuration()).toFloat().coerceIn(0f, 1f)
 
     var showCheck by remember { mutableStateOf(false) }
     LaunchedEffect(flashTick) {
@@ -247,32 +248,38 @@ private fun TaskCard(
         ),
     ) {
         Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                StatusDot(task.status)
-                Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = task.name,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colorForStatus(task.status),
-                    )
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, top = 12.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    StatusDot(task.status, gradientColorAt(fraction))
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = task.name,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = displayText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colorForStatus(task.status),
+                        )
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete ${task.name}",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete ${task.name}",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                TimeSinceBar(
+                    fraction = fraction,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+                )
             }
 
             CheckFlashOverlay(
@@ -304,7 +311,7 @@ private fun CheckFlashOverlay(
 }
 
 @Composable
-private fun StatusDot(status: TaskStatus) {
+private fun StatusDot(status: TaskStatus, color: Color) {
     val label = when (status) {
         TaskStatus.OK -> "On track"
         TaskStatus.DUE_SOON -> "Due soon"
@@ -314,7 +321,7 @@ private fun StatusDot(status: TaskStatus) {
         modifier = Modifier
             .size(12.dp)
             .clip(CircleShape)
-            .background(colorForStatus(status))
+            .background(color)
             .semantics { contentDescription = label },
     )
 }
