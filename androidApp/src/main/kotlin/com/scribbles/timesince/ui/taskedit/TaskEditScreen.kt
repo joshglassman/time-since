@@ -18,6 +18,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -92,11 +93,19 @@ fun TaskEditScreen(
             frequencyAmount = state.frequencyAmount,
             frequencyUnit = state.frequencyUnit,
             lastCompletedAt = state.lastCompletedAt,
+            snoozeAmount = state.snoozeAmount,
+            snoozeUnit = state.snoozeUnit,
             canSave = state.canSave,
+            canSnooze = state.canSnooze,
+            canUndo = state.canUndo,
             onNameChanged = viewModel::onNameChanged,
             onFrequencyAmountChanged = viewModel::onFrequencyAmountChanged,
             onFrequencyUnitChanged = viewModel::onFrequencyUnitChanged,
             onLastCompletedAtChanged = viewModel::onLastCompletedAtChanged,
+            onSnoozeAmountChanged = viewModel::onSnoozeAmountChanged,
+            onSnoozeUnitChanged = viewModel::onSnoozeUnitChanged,
+            onSnooze = viewModel::onSnooze,
+            onUndo = viewModel::onUndo,
             onSave = viewModel::onSave,
             contentPadding = padding,
         )
@@ -111,11 +120,19 @@ private fun TaskEditForm(
     frequencyAmount: String,
     frequencyUnit: FrequencyUnit,
     lastCompletedAt: Instant?,
+    snoozeAmount: String,
+    snoozeUnit: FrequencyUnit,
     canSave: Boolean,
+    canSnooze: Boolean,
+    canUndo: Boolean,
     onNameChanged: (String) -> Unit,
     onFrequencyAmountChanged: (String) -> Unit,
     onFrequencyUnitChanged: (FrequencyUnit) -> Unit,
     onLastCompletedAtChanged: (Instant) -> Unit,
+    onSnoozeAmountChanged: (String) -> Unit,
+    onSnoozeUnitChanged: (FrequencyUnit) -> Unit,
+    onSnooze: () -> Unit,
+    onUndo: () -> Unit,
     onSave: () -> Unit,
     contentPadding: PaddingValues,
 ) {
@@ -170,6 +187,46 @@ private fun TaskEditForm(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Save")
+        }
+
+        if (!isNew) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Text("Snooze until later", style = MaterialTheme.typography.labelLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(
+                    value = snoozeAmount,
+                    onValueChange = onSnoozeAmountChanged,
+                    label = { Text("Amount") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+                FrequencyUnitDropdown(
+                    selected = snoozeUnit,
+                    onSelected = onSnoozeUnitChanged,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            OutlinedButton(
+                onClick = onSnooze,
+                enabled = canSnooze,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Snooze")
+            }
+            OutlinedButton(
+                onClick = onUndo,
+                enabled = canUndo,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Undo last action")
+            }
         }
     }
 }

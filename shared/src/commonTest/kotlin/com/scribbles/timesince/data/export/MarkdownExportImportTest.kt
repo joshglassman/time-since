@@ -6,6 +6,8 @@ import com.scribbles.timesince.domain.model.TaskFrequency
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 class MarkdownExportImportTest {
@@ -39,6 +41,38 @@ class MarkdownExportImportTest {
         val markdown = MarkdownExporter.export(sample)
         val parsed = MarkdownImporter.import(markdown)
         assertEquals(sample, parsed)
+    }
+
+    @Test
+    fun roundTripPreservesSnooze() {
+        val tasks = listOf(
+            Task(
+                id = "880e8400-e29b-41d4-a716-446655440003",
+                name = "Snoozed task",
+                lastCompletedAt = Instant.parse("2026-04-08T10:30:00Z"),
+                frequency = TaskFrequency(3, FrequencyUnit.DAYS),
+                createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+                snooze = 2.days + 5.hours,
+            ),
+        )
+        val markdown = MarkdownExporter.export(tasks)
+        assertTrue(markdown.contains("- snooze: ${(2.days + 5.hours).inWholeMilliseconds}"))
+        assertEquals(tasks, MarkdownImporter.import(markdown))
+    }
+
+    @Test
+    fun blockWithoutSnoozeImportsAsZero() {
+        val markdown = """
+            # Time Since Tasks
+
+            ## No snooze line
+            - frequency: 1 days
+            - last completed: 2026-04-08T10:30:00Z
+            - created: 2026-01-01T00:00:00Z
+            - id: id-1
+        """.trimIndent()
+        val task = MarkdownImporter.import(markdown).single()
+        assertEquals(kotlin.time.Duration.ZERO, task.snooze)
     }
 
     @Test

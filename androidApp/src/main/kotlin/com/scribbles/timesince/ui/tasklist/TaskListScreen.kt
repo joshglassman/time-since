@@ -39,6 +39,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -47,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +69,7 @@ import com.scribbles.timesince.ui.theme.statusDueSoon
 import com.scribbles.timesince.ui.theme.statusOk
 import com.scribbles.timesince.ui.theme.statusOverdue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,11 +84,23 @@ fun TaskListScreen(
     var taskToDelete by remember { mutableStateOf<TaskListItem?>(null) }
     var flashTick by remember { mutableStateOf(0) }
     var flashTaskId by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.completedTaskEvents.collect { id ->
             flashTaskId = id
             flashTick += 1
+            scope.launch {
+                val result = snackbarHostState.showSnackbar(
+                    message = "Task completed",
+                    actionLabel = "Undo",
+                    duration = SnackbarDuration.Short,
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.onUndoComplete(id)
+                }
+            }
         }
     }
 
@@ -118,6 +136,7 @@ fun TaskListScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddTask) {
                 Icon(Icons.Default.Add, contentDescription = "Add task")
@@ -235,7 +254,8 @@ private fun TaskCard(
         modifier = Modifier
             .fillMaxWidth()
             .semantics {
-                contentDescription = "${task.name}, $displayText, $statusLabel. " +
+                val snoozeNote = if (task.isSnoozed) " Snoozed." else ""
+                contentDescription = "${task.name}, $displayText, $statusLabel.$snoozeNote " +
                     "Tap to edit. Long-press to mark complete."
             }
             .combinedClickable(
@@ -261,11 +281,20 @@ private fun TaskCard(
                             text = task.name,
                             style = MaterialTheme.typography.titleMedium,
                         )
-                        Text(
-                            text = displayText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorForStatus(task.status),
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = displayText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colorForStatus(task.status),
+                            )
+                            if (task.isSnoozed) {
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "💤",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
                     }
                     IconButton(onClick = onDelete) {
                         Icon(

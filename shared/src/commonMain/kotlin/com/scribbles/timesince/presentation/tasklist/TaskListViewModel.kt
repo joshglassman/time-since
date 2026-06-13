@@ -6,6 +6,7 @@ import com.scribbles.timesince.data.sync.SyncCoordinator
 import com.scribbles.timesince.domain.usecase.CompleteTaskUseCase
 import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
 import com.scribbles.timesince.domain.usecase.GetSortedTasksUseCase
+import com.scribbles.timesince.domain.usecase.UndoTaskUseCase
 import com.scribbles.timesince.domain.time.TimeZoneProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,6 +21,7 @@ class TaskListViewModel(
     private val getSortedTasks: GetSortedTasksUseCase,
     private val completeTask: CompleteTaskUseCase,
     private val deleteTask: DeleteTaskUseCase,
+    private val undoTask: UndoTaskUseCase,
     private val syncCoordinator: SyncCoordinator? = null,
     private val clock: Clock = Clock.System,
     private val timeZoneProvider: TimeZoneProvider = TimeZoneProvider.System,
@@ -54,6 +56,14 @@ class TaskListViewModel(
     fun onTaskDeleted(taskId: String) {
         viewModelScope.launch {
             deleteTask(taskId)
+            syncCoordinator?.requestSync()
+        }
+    }
+
+    /** Reverts the most recent completion of [taskId] (e.g. from the Snackbar). */
+    fun onUndoComplete(taskId: String) {
+        viewModelScope.launch {
+            undoTask(taskId)
             syncCoordinator?.requestSync()
         }
     }

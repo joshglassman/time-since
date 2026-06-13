@@ -5,18 +5,20 @@ import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.Task
 import com.scribbles.timesince.domain.model.TaskFrequency
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 /**
  * Wire format for syncing tasks to/from Google Drive.
  *
  * v2 adds per-task `updatedAt` (merge-resolution basis) and a `deletedTasks`
- * tombstone list so deletions propagate across devices. A payload without
- * `updatedAt` (v1 producer) parses with `updatedAt = lastCompletedAt`.
+ * tombstone list so deletions propagate across devices. v3 adds per-task
+ * `snoozeMillis`. Older payloads parse with back-compatible defaults: a missing
+ * `updatedAt` falls back to `lastCompletedAt`, a missing `snoozeMillis` to `0`.
  */
 @Serializable
 data class SyncPayload(
-    val version: Int = 2,
+    val version: Int = 3,
     val syncedAt: String,
     val tasks: List<TaskDto> = emptyList(),
     val deletedTasks: List<TombstoneDto> = emptyList(),
@@ -46,6 +48,7 @@ data class TaskDto(
     val frequencyUnit: String,
     val createdAt: String,
     val updatedAt: String? = null,
+    val snoozeMillis: Long = 0,
 ) {
     companion object {
         fun from(task: Task): TaskDto = TaskDto(
@@ -56,6 +59,7 @@ data class TaskDto(
             frequencyUnit = task.frequency.unit.name,
             createdAt = task.createdAt.toString(),
             updatedAt = task.updatedAt.toString(),
+            snoozeMillis = task.snooze.inWholeMilliseconds,
         )
     }
 
@@ -69,6 +73,7 @@ data class TaskDto(
             frequency = TaskFrequency(frequencyAmount, unit),
             createdAt = Instant.parse(createdAt),
             updatedAt = updatedAt?.let { Instant.parse(it) } ?: lastCompleted,
+            snooze = snoozeMillis.milliseconds,
         )
     } catch (_: Exception) {
         null

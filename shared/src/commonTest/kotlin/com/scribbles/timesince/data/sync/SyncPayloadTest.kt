@@ -7,6 +7,8 @@ import com.scribbles.timesince.domain.model.TaskFrequency
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 class SyncPayloadTest {
@@ -125,6 +127,46 @@ class SyncPayloadTest {
         val decoded = json.decodeFromString(SyncPayload.serializer(), raw)
         val task = decoded.toTasks().single()
         assertEquals(Instant.parse("2026-04-08T10:30:00Z"), task.updatedAt)
+    }
+
+    @Test
+    fun snoozeRoundTrips() {
+        val task = Task(
+            id = "snoozed",
+            name = "Snoozed",
+            lastCompletedAt = syncTime,
+            frequency = TaskFrequency(1, FrequencyUnit.DAYS),
+            createdAt = syncTime,
+            updatedAt = syncTime,
+            snooze = 2.days,
+        )
+        val payload = SyncPayload.from(listOf(task), emptyList(), syncTime)
+        val encoded = json.encodeToString(SyncPayload.serializer(), payload)
+        val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
+        assertEquals(listOf(task), decoded.toTasks())
+    }
+
+    @Test
+    fun v2PayloadWithoutSnoozeParsesAsZero() {
+        val raw = """
+            {
+              "version": 2,
+              "syncedAt": "${syncTime}",
+              "tasks": [
+                {
+                  "id": "id-1",
+                  "name": "Legacy v2",
+                  "lastCompletedAt": "2026-04-08T10:30:00Z",
+                  "frequencyAmount": 2,
+                  "frequencyUnit": "DAYS",
+                  "createdAt": "2026-01-01T00:00:00Z",
+                  "updatedAt": "2026-04-08T10:30:00Z"
+                }
+              ]
+            }
+        """.trimIndent()
+        val decoded = json.decodeFromString(SyncPayload.serializer(), raw)
+        assertEquals(Duration.ZERO, decoded.toTasks().single().snooze)
     }
 
     @Test

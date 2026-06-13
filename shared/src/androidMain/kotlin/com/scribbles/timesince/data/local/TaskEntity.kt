@@ -12,4 +12,5 @@ data class TaskEntity(
     val frequencyUnit: String,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
+    val snoozeMillis: Long = 0,
 )

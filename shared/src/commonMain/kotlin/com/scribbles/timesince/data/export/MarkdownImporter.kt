@@ -3,6 +3,8 @@ package com.scribbles.timesince.data.export
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.Task
 import com.scribbles.timesince.domain.model.TaskFrequency
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 /**
@@ -17,6 +19,7 @@ object MarkdownImporter {
     private val frequencyRegex = Regex("""^- frequency:\s*(\d+)\s+(\w+)\s*$""")
     private val lastCompletedRegex = Regex("""^- last completed:\s*(\S+)\s*$""")
     private val createdRegex = Regex("""^- created:\s*(\S+)\s*$""")
+    private val snoozeRegex = Regex("""^- snooze:\s*(\d+)\s*$""")
     private val idRegex = Regex("""^- id:\s*(\S+)\s*$""")
     private val nameRegex = Regex("""^##\s+(.+?)\s*$""")
 
@@ -28,6 +31,7 @@ object MarkdownImporter {
         var frequency: TaskFrequency? = null
         var lastCompleted: Instant? = null
         var created: Instant? = null
+        var snooze: Duration = Duration.ZERO
         var id: String? = null
 
         fun flush() {
@@ -42,6 +46,7 @@ object MarkdownImporter {
                 lastCompletedAt = l,
                 frequency = f,
                 createdAt = c,
+                snooze = snooze,
             )
         }
 
@@ -57,6 +62,7 @@ object MarkdownImporter {
                 frequency = null
                 lastCompleted = null
                 created = null
+                snooze = Duration.ZERO
                 id = null
                 continue
             }
@@ -74,6 +80,10 @@ object MarkdownImporter {
 
             createdRegex.matchEntire(line)?.let { match ->
                 created = parseInstant(match.groupValues[1])
+            }
+
+            snoozeRegex.matchEntire(line)?.let { match ->
+                match.groupValues[1].toLongOrNull()?.let { snooze = it.milliseconds }
             }
 
             idRegex.matchEntire(line)?.let { match ->

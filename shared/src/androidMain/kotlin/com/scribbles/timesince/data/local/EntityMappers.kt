@@ -4,6 +4,7 @@ import com.scribbles.timesince.domain.model.DeletedTaskTombstone
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.Task
 import com.scribbles.timesince.domain.model.TaskFrequency
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 fun TaskEntity.toDomain(): Task = Task(
@@ -16,6 +17,7 @@ fun TaskEntity.toDomain(): Task = Task(
     ),
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
     updatedAt = Instant.fromEpochMilliseconds(updatedAtEpochMillis),
+    snooze = snoozeMillis.milliseconds,
 )
 
 fun Task.toEntity(): TaskEntity = TaskEntity(
@@ -26,6 +28,7 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
     frequencyUnit = frequency.unit.name,
     createdAtEpochMillis = createdAt.toEpochMilliseconds(),
     updatedAtEpochMillis = updatedAt.toEpochMilliseconds(),
+    snoozeMillis = snooze.inWholeMilliseconds,
 )
 
 fun DeletedTaskEntity.toDomain(): DeletedTaskTombstone = DeletedTaskTombstone(

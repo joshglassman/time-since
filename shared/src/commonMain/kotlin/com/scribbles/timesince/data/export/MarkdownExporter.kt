@@ -29,6 +29,9 @@ object MarkdownExporter {
             appendLine("- frequency: ${task.frequency.amount} ${task.frequency.unit}")
             appendLine("- last completed: ${task.lastCompletedAt}")
             appendLine("- created: ${task.createdAt}")
+            if (task.snooze.isPositive()) {
+                appendLine("- snooze: ${task.snooze.inWholeMilliseconds}")
+            }
             appendLine("- id: ${task.id}")
         }
     }

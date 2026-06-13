@@ -33,6 +33,8 @@ data class TaskListItem(
      * the Compose layer never touches `frequency` for deadline/fill math.
      */
     val fillFraction: Float,
+    /** True when the task carries an active snooze (shows the 💤 indicator). */
+    val isSnoozed: Boolean,
 )
 
 internal fun Task.toListItem(now: Instant, tz: TimeZone): TaskListItem {
@@ -52,5 +54,6 @@ internal fun Task.toListItem(now: Instant, tz: TimeZone): TaskListItem {
         frequency = frequency,
         displayText = TimeSinceFormatter.format(lastCompletedAt, now, tz, frequency),
         fillFraction = fraction,
+        isSnoozed = snooze > Duration.ZERO,
     )
 }

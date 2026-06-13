@@ -35,7 +35,7 @@ val appModule: Module = module {
         )
     }
 
-    viewModel { TaskListViewModel(get(), get(), get(), get()) }
-    viewModel { TaskEditViewModel(get(), get(), get(), get()) }
+    viewModel { TaskListViewModel(get(), get(), get(), get(), get()) }
+    viewModel { TaskEditViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
 }

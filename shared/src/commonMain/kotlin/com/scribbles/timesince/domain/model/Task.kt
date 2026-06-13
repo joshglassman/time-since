@@ -12,9 +12,15 @@ data class Task(
     val frequency: TaskFrequency,
     val createdAt: Instant,
     val updatedAt: Instant = lastCompletedAt,
+    /**
+     * Extra time added to the natural deadline until the next completion.
+     * Always `>= 0`; reset to [Duration.ZERO] on completion. See
+     * `SnoozeTaskUseCase` for how it is computed.
+     */
+    val snooze: Duration = Duration.ZERO,
 )
 
-fun Task.deadline(tz: TimeZone): Instant = frequency.advance(lastCompletedAt, tz)
+fun Task.deadline(tz: TimeZone): Instant = frequency.advance(lastCompletedAt, tz) + snooze
 
 fun Task.remainingTime(now: Instant = Clock.System.now(), tz: TimeZone): Duration =
     deadline(tz) - now
@@ -25,7 +31,7 @@ fun Task.elapsedSinceCompleted(now: Instant = Clock.System.now()): Duration =
 fun Task.status(now: Instant = Clock.System.now(), tz: TimeZone): TaskStatus {
     val deadline = deadline(tz)
     val remaining = deadline - now
-    // Use the concrete current cycle length (calendar-correct) as the total.
+    // Use the concrete current cycle length (calendar-correct, incl. snooze) as the total.
     val total = deadline - lastCompletedAt
     return when {
         remaining < Duration.ZERO -> TaskStatus.OVERDUE

@@ -6,7 +6,10 @@ import com.scribbles.timesince.data.sync.SyncCoordinator
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.TaskFrequency
 import com.scribbles.timesince.domain.repository.TaskRepository
+import com.scribbles.timesince.domain.undo.UndoStore
 import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
+import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
+import com.scribbles.timesince.domain.usecase.UndoTaskUseCase
 import com.scribbles.timesince.domain.usecase.UpdateTaskUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +22,9 @@ class TaskEditViewModel(
     private val repository: TaskRepository,
     private val createTask: CreateTaskUseCase,
     private val updateTask: UpdateTaskUseCase,
+    private val snoozeTask: SnoozeTaskUseCase,
+    private val undoTask: UndoTaskUseCase,
+    private val undoStore: UndoStore,
     private val syncCoordinator: SyncCoordinator? = null,
 ) : ViewModel() {
 
@@ -47,6 +53,9 @@ class TaskEditViewModel(
                     frequencyAmount = task.frequency.amount.toString(),
                     frequencyUnit = task.frequency.unit,
                     lastCompletedAt = task.lastCompletedAt,
+                    // Default the snooze unit to the task's own repetition unit.
+                    snoozeUnit = task.frequency.unit,
+                    canUndo = undoStore.hasSnapshot(taskId),
                 )
             }
         }
@@ -68,6 +77,39 @@ class TaskEditViewModel(
 
     fun onLastCompletedAtChanged(instant: Instant) {
         _state.update { it.copy(lastCompletedAt = instant) }
+    }
+
+    fun onSnoozeAmountChanged(amount: String) {
+        if (amount.isEmpty() || amount.all(Char::isDigit)) {
+            _state.update { it.copy(snoozeAmount = amount) }
+        }
+    }
+
+    fun onSnoozeUnitChanged(unit: FrequencyUnit) {
+        _state.update { it.copy(snoozeUnit = unit) }
+    }
+
+    fun onSnooze() {
+        val current = _state.value
+        if (!current.canSnooze) return
+        val id = editingTaskId ?: return
+        val amount = current.snoozeAmount.toIntOrNull() ?: return
+        viewModelScope.launch {
+            snoozeTask(id, amount, current.snoozeUnit)
+            syncCoordinator?.requestSync()
+            _state.update { it.copy(canUndo = true) }
+        }
+    }
+
+    fun onUndo() {
+        val id = editingTaskId ?: return
+        viewModelScope.launch {
+            val undone = undoTask(id)
+            if (undone) {
+                syncCoordinator?.requestSync()
+                _state.update { it.copy(canUndo = false) }
+            }
+        }
     }
 
     fun onSave() {

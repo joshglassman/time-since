@@ -2,9 +2,13 @@ package com.scribbles.timesince.presentation.taskedit
 
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.usecase.BASE_TIME
+import com.scribbles.timesince.domain.undo.UndoStore
 import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
 import com.scribbles.timesince.domain.usecase.FakeTaskRepository
+import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
 import com.scribbles.timesince.domain.usecase.TestClock
+import com.scribbles.timesince.domain.usecase.UTC_PROVIDER
+import com.scribbles.timesince.domain.usecase.UndoTaskUseCase
 import com.scribbles.timesince.domain.usecase.UpdateTaskUseCase
 import com.scribbles.timesince.domain.usecase.taskWith
 import com.scribbles.timesince.presentation.installMainDispatcher
@@ -23,6 +27,7 @@ class TaskEditViewModelTest {
 
     private val repository = FakeTaskRepository()
     private val clock = TestClock(BASE_TIME)
+    private val undoStore = UndoStore()
     private lateinit var viewModel: TaskEditViewModel
 
     @BeforeTest
@@ -32,6 +37,9 @@ class TaskEditViewModelTest {
             repository = repository,
             createTask = CreateTaskUseCase(repository, clock),
             updateTask = UpdateTaskUseCase(repository),
+            snoozeTask = SnoozeTaskUseCase(repository, undoStore, clock, UTC_PROVIDER),
+            undoTask = UndoTaskUseCase(repository, undoStore),
+            undoStore = undoStore,
         )
     }
 
@@ -150,6 +158,42 @@ class TaskEditViewModelTest {
         viewModel.load(null)
         viewModel.onSave()
         assertFalse(viewModel.state.value.saved)
+    }
+
+    @Test
+    fun newTaskCannotSnooze() = runTest {
+        viewModel.load(null)
+        assertFalse(viewModel.state.value.canSnooze)
+    }
+
+    @Test
+    fun snoozeAppliesAndEnablesUndo() = runTest {
+        repository.create(
+            taskWith(id = "a", frequencyAmount = 1, frequencyUnit = FrequencyUnit.DAYS),
+        )
+        viewModel.load("a")
+        assertTrue(viewModel.state.value.canSnooze)
+
+        viewModel.onSnoozeAmountChanged("5")
+        viewModel.onSnooze()
+
+        assertTrue(repository.getById("a")!!.snooze > kotlin.time.Duration.ZERO)
+        assertTrue(viewModel.state.value.canUndo)
+    }
+
+    @Test
+    fun undoRevertsSnoozeAndDisablesUndo() = runTest {
+        repository.create(
+            taskWith(id = "a", frequencyAmount = 1, frequencyUnit = FrequencyUnit.DAYS),
+        )
+        viewModel.load("a")
+        viewModel.onSnoozeAmountChanged("5")
+        viewModel.onSnooze()
+
+        viewModel.onUndo()
+
+        assertEquals(kotlin.time.Duration.ZERO, repository.getById("a")!!.snooze)
+        assertFalse(viewModel.state.value.canUndo)
     }
 
     @Test
