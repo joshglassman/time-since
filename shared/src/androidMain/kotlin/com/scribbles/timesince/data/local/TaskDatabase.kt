@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [TaskEntity::class, DeletedTaskEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class TaskDatabase : RoomDatabase() {
@@ -39,5 +39,12 @@ val MIGRATION_2_3: Migration = object : Migration(2, 3) {
         db.execSQL(
             "ALTER TABLE tasks ADD COLUMN snoozeMillis INTEGER NOT NULL DEFAULT 0",
         )
+    }
+}
+
+val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE tasks ADD COLUMN pausedAtEpochMillis INTEGER")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN archived INTEGER NOT NULL DEFAULT 0")
     }
 }

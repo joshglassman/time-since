@@ -13,12 +13,14 @@ import kotlin.time.Instant
  *
  * v2 adds per-task `updatedAt` (merge-resolution basis) and a `deletedTasks`
  * tombstone list so deletions propagate across devices. v3 adds per-task
- * `snoozeMillis`. Older payloads parse with back-compatible defaults: a missing
- * `updatedAt` falls back to `lastCompletedAt`, a missing `snoozeMillis` to `0`.
+ * `snoozeMillis`. v4 adds per-task `pausedAtMillis` and `archived`. Older
+ * payloads parse with back-compatible defaults: a missing `updatedAt` falls back
+ * to `lastCompletedAt`, a missing `snoozeMillis` to `0`, `pausedAtMillis` to
+ * `null`, and `archived` to `false`.
  */
 @Serializable
 data class SyncPayload(
-    val version: Int = 3,
+    val version: Int = 4,
     val syncedAt: String,
     val tasks: List<TaskDto> = emptyList(),
     val deletedTasks: List<TombstoneDto> = emptyList(),
@@ -49,6 +51,8 @@ data class TaskDto(
     val createdAt: String,
     val updatedAt: String? = null,
     val snoozeMillis: Long = 0,
+    val pausedAtMillis: Long? = null,
+    val archived: Boolean = false,
 ) {
     companion object {
         fun from(task: Task): TaskDto = TaskDto(
@@ -60,6 +64,8 @@ data class TaskDto(
             createdAt = task.createdAt.toString(),
             updatedAt = task.updatedAt.toString(),
             snoozeMillis = task.snooze.inWholeMilliseconds,
+            pausedAtMillis = task.pausedAt?.toEpochMilliseconds(),
+            archived = task.archived,
         )
     }
 
@@ -74,6 +80,8 @@ data class TaskDto(
             createdAt = Instant.parse(createdAt),
             updatedAt = updatedAt?.let { Instant.parse(it) } ?: lastCompleted,
             snooze = snoozeMillis.milliseconds,
+            pausedAt = pausedAtMillis?.let { Instant.fromEpochMilliseconds(it) },
+            archived = archived,
         )
     } catch (_: Exception) {
         null

@@ -13,6 +13,8 @@ data class TaskEditUiState(
     val snoozeAmount: String = "1",
     val snoozeUnit: FrequencyUnit = FrequencyUnit.DAYS,
     val canUndo: Boolean = false,
+    val isPaused: Boolean = false,
+    val isArchived: Boolean = false,
     val saved: Boolean = false,
 ) {
     val canSave: Boolean

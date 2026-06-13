@@ -160,6 +160,37 @@ class TaskListViewModelTest {
     }
 
     @Test
+    fun archivedTasksAreHiddenFromActiveListAndShownWhenToggled() = runTest {
+        repository.create(taskWith(id = "active", name = "Active"))
+        repository.create(taskWith(id = "arch", name = "Archived", archived = true))
+
+        viewModel.state.test {
+            var current = awaitItem()
+            while (current.isLoading) current = awaitItem()
+            // Active view: only the non-archived task.
+            assertEquals(listOf("active"), current.tasks.map { it.id })
+            assertFalse(current.showingArchived)
+
+            viewModel.onToggleShowArchived()
+            while (!current.showingArchived) current = awaitItem()
+            assertEquals(listOf("arch"), current.tasks.map { it.id })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun pausedTaskShowsPausedIndicator() = runTest {
+        repository.create(taskWith(id = "a", pausedAt = BASE_TIME))
+
+        viewModel.state.test {
+            var current = awaitItem()
+            while (current.isLoading) current = awaitItem()
+            assertTrue(current.tasks.single().isPaused)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun onTaskDeletedRemovesFromRepository() = runTest {
         repository.create(taskWith(id = "a"))
         repository.create(taskWith(id = "b"))

@@ -147,6 +147,49 @@ class SyncPayloadTest {
     }
 
     @Test
+    fun pauseAndArchiveRoundTrip() {
+        val task = Task(
+            id = "parked",
+            name = "Parked",
+            lastCompletedAt = syncTime,
+            frequency = TaskFrequency(1, FrequencyUnit.DAYS),
+            createdAt = syncTime,
+            updatedAt = syncTime,
+            pausedAt = Instant.parse("2026-04-09T09:00:00Z"),
+            archived = true,
+        )
+        val payload = SyncPayload.from(listOf(task), emptyList(), syncTime)
+        val encoded = json.encodeToString(SyncPayload.serializer(), payload)
+        val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
+        assertEquals(listOf(task), decoded.toTasks())
+    }
+
+    @Test
+    fun v3PayloadWithoutPauseOrArchiveParsesAsDefaults() {
+        val raw = """
+            {
+              "version": 3,
+              "syncedAt": "${syncTime}",
+              "tasks": [
+                {
+                  "id": "id-1",
+                  "name": "Legacy v3",
+                  "lastCompletedAt": "2026-04-08T10:30:00Z",
+                  "frequencyAmount": 2,
+                  "frequencyUnit": "DAYS",
+                  "createdAt": "2026-01-01T00:00:00Z",
+                  "updatedAt": "2026-04-08T10:30:00Z",
+                  "snoozeMillis": 0
+                }
+              ]
+            }
+        """.trimIndent()
+        val task = json.decodeFromString(SyncPayload.serializer(), raw).toTasks().single()
+        assertEquals(null, task.pausedAt)
+        assertEquals(false, task.archived)
+    }
+
+    @Test
     fun v2PayloadWithoutSnoozeParsesAsZero() {
         val raw = """
             {

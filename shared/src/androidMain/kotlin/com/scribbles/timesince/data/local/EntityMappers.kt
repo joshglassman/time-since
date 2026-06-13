@@ -18,6 +18,8 @@ fun TaskEntity.toDomain(): Task = Task(
     createdAt = Instant.fromEpochMilliseconds(createdAtEpochMillis),
     updatedAt = Instant.fromEpochMilliseconds(updatedAtEpochMillis),
     snooze = snoozeMillis.milliseconds,
+    pausedAt = pausedAtEpochMillis?.let { Instant.fromEpochMilliseconds(it) },
+    archived = archived,
 )
 
 fun Task.toEntity(): TaskEntity = TaskEntity(
@@ -29,6 +31,8 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
     createdAtEpochMillis = createdAt.toEpochMilliseconds(),
     updatedAtEpochMillis = updatedAt.toEpochMilliseconds(),
     snoozeMillis = snooze.inWholeMilliseconds,
+    pausedAtEpochMillis = pausedAt?.toEpochMilliseconds(),
+    archived = archived,
 )
 
 fun DeletedTaskEntity.toDomain(): DeletedTaskTombstone = DeletedTaskTombstone(

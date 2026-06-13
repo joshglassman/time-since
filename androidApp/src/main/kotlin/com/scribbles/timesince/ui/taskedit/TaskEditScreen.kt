@@ -1,6 +1,8 @@
 package com.scribbles.timesince.ui.taskedit
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,7 +29,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
@@ -38,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -98,6 +100,8 @@ fun TaskEditScreen(
             canSave = state.canSave,
             canSnooze = state.canSnooze,
             canUndo = state.canUndo,
+            isPaused = state.isPaused,
+            isArchived = state.isArchived,
             onNameChanged = viewModel::onNameChanged,
             onFrequencyAmountChanged = viewModel::onFrequencyAmountChanged,
             onFrequencyUnitChanged = viewModel::onFrequencyUnitChanged,
@@ -106,6 +110,8 @@ fun TaskEditScreen(
             onSnoozeUnitChanged = viewModel::onSnoozeUnitChanged,
             onSnooze = viewModel::onSnooze,
             onUndo = viewModel::onUndo,
+            onTogglePause = viewModel::onTogglePause,
+            onToggleArchive = viewModel::onToggleArchive,
             onSave = viewModel::onSave,
             contentPadding = padding,
         )
@@ -125,6 +131,8 @@ private fun TaskEditForm(
     canSave: Boolean,
     canSnooze: Boolean,
     canUndo: Boolean,
+    isPaused: Boolean,
+    isArchived: Boolean,
     onNameChanged: (String) -> Unit,
     onFrequencyAmountChanged: (String) -> Unit,
     onFrequencyUnitChanged: (FrequencyUnit) -> Unit,
@@ -133,6 +141,8 @@ private fun TaskEditForm(
     onSnoozeUnitChanged: (FrequencyUnit) -> Unit,
     onSnooze: () -> Unit,
     onUndo: () -> Unit,
+    onTogglePause: () -> Unit,
+    onToggleArchive: () -> Unit,
     onSave: () -> Unit,
     contentPadding: PaddingValues,
 ) {
@@ -140,6 +150,7 @@ private fun TaskEditForm(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -227,6 +238,23 @@ private fun TaskEditForm(
             ) {
                 Text("Undo last action")
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Pause is unavailable on archived tasks (archive overrides pause).
+            OutlinedButton(
+                onClick = onTogglePause,
+                enabled = !isArchived,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (isPaused) "Resume" else "Pause")
+            }
+            OutlinedButton(
+                onClick = onToggleArchive,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (isArchived) "Unarchive" else "Archive")
+            }
         }
     }
 }
@@ -242,6 +270,7 @@ private fun LastCompletedRow(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = formatLastCompleted(value),
@@ -351,13 +380,14 @@ private fun FrequencyUnitDropdown(
         onExpandedChange = { expanded = !expanded },
         modifier = modifier,
     ) {
-        TextField(
+        OutlinedTextField(
             value = selected.label,
             onValueChange = {},
             readOnly = true,
             label = { Text("Unit") },
+            singleLine = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier
                 .menuAnchor(
                     androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable,

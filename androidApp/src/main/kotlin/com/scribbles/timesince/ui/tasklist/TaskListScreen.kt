@@ -128,8 +128,11 @@ fun TaskListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Time Since") },
+                title = { Text(if (state.showingArchived) "Archived" else "Time Since") },
                 actions = {
+                    TextButton(onClick = viewModel::onToggleShowArchived) {
+                        Text(if (state.showingArchived) "Active" else "Archived")
+                    }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
@@ -138,8 +141,10 @@ fun TaskListScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddTask) {
-                Icon(Icons.Default.Add, contentDescription = "Add task")
+            if (!state.showingArchived) {
+                FloatingActionButton(onClick = onAddTask) {
+                    Icon(Icons.Default.Add, contentDescription = "Add task")
+                }
             }
         },
     ) { padding ->
@@ -184,17 +189,21 @@ private fun TaskListContent(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "⏰",
+                    text = if (state.showingArchived) "🗄" else "⏰",
                     style = MaterialTheme.typography.displayLarge,
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "No tasks yet",
+                    text = if (state.showingArchived) "No archived tasks" else "No tasks yet",
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Long-press a task to mark it complete.",
+                    text = if (state.showingArchived) {
+                        "Tasks you archive will appear here."
+                    } else {
+                        "Long-press a task to mark it complete."
+                    },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -255,7 +264,8 @@ private fun TaskCard(
             .fillMaxWidth()
             .semantics {
                 val snoozeNote = if (task.isSnoozed) " Snoozed." else ""
-                contentDescription = "${task.name}, $displayText, $statusLabel.$snoozeNote " +
+                val pauseNote = if (task.isPaused) " Paused." else ""
+                contentDescription = "${task.name}, $displayText, $statusLabel.$snoozeNote$pauseNote " +
                     "Tap to edit. Long-press to mark complete."
             }
             .combinedClickable(
@@ -292,6 +302,14 @@ private fun TaskCard(
                                 Text(
                                     text = "💤",
                                     style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            if (task.isPaused) {
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "⏸",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }

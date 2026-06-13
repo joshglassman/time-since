@@ -17,7 +17,7 @@ class GetOverdueTasksUseCase(
         val now = clock.now()
         val tz = timeZoneProvider.current()
         return repository.observeAll().first().filter {
-            it.status(now, tz) == TaskStatus.OVERDUE
+            !it.archived && it.status(now, tz) == TaskStatus.OVERDUE
         }
     }
 }

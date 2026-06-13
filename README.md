@@ -6,8 +6,13 @@ Built with **Kotlin Multiplatform** and **Compose Multiplatform**. The `:shared`
 
 ## Features
 
-- Recurring tasks with custom frequencies (hours / days / weeks / months)
+- Recurring tasks with custom frequencies (hours / days / weeks / months / years)
+- Calendar-correct deadlines computed in your time zone (a "1 month" task lands on the same day next month; DST-aware)
 - Time since last done and overdue status at a glance, with a heat-gradient progress bar that fills from just-completed toward the deadline
+- **Snooze** a task to push its deadline out until the next completion, with a 💤 indicator on the list
+- **Undo** an accidental completion or snooze (from a Snackbar or the edit screen)
+- **Pause** a task to freeze its countdown, with a ⏸ indicator on the list, then resume right where it left off — no false overdue for time spent paused
+- **Archive** tasks to park them out of the active list (and bring them back unchanged)
 - WorkManager-driven notifications for overdue tasks
 - Local-first storage via Room + bundled SQLite
 - Two-way Google Drive sync with conflict resolution

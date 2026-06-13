@@ -20,6 +20,8 @@ object MarkdownImporter {
     private val lastCompletedRegex = Regex("""^- last completed:\s*(\S+)\s*$""")
     private val createdRegex = Regex("""^- created:\s*(\S+)\s*$""")
     private val snoozeRegex = Regex("""^- snooze:\s*(\d+)\s*$""")
+    private val pausedRegex = Regex("""^- paused:\s*(\d+)\s*$""")
+    private val archivedRegex = Regex("""^- archived:\s*(\S+)\s*$""")
     private val idRegex = Regex("""^- id:\s*(\S+)\s*$""")
     private val nameRegex = Regex("""^##\s+(.+?)\s*$""")
 
@@ -32,6 +34,8 @@ object MarkdownImporter {
         var lastCompleted: Instant? = null
         var created: Instant? = null
         var snooze: Duration = Duration.ZERO
+        var pausedAt: Instant? = null
+        var archived = false
         var id: String? = null
 
         fun flush() {
@@ -47,6 +51,8 @@ object MarkdownImporter {
                 frequency = f,
                 createdAt = c,
                 snooze = snooze,
+                pausedAt = pausedAt,
+                archived = archived,
             )
         }
 
@@ -63,6 +69,8 @@ object MarkdownImporter {
                 lastCompleted = null
                 created = null
                 snooze = Duration.ZERO
+                pausedAt = null
+                archived = false
                 id = null
                 continue
             }
@@ -84,6 +92,16 @@ object MarkdownImporter {
 
             snoozeRegex.matchEntire(line)?.let { match ->
                 match.groupValues[1].toLongOrNull()?.let { snooze = it.milliseconds }
+            }
+
+            pausedRegex.matchEntire(line)?.let { match ->
+                match.groupValues[1].toLongOrNull()?.let {
+                    pausedAt = Instant.fromEpochMilliseconds(it)
+                }
+            }
+
+            archivedRegex.matchEntire(line)?.let { match ->
+                archived = match.groupValues[1].equals("true", ignoreCase = true)
             }
 
             idRegex.matchEntire(line)?.let { match ->

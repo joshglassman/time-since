@@ -22,6 +22,8 @@ fun taskWith(
     createdAt: Instant = BASE_TIME,
     updatedAt: Instant = lastCompletedAt,
     snooze: Duration = Duration.ZERO,
+    pausedAt: Instant? = null,
+    archived: Boolean = false,
 ): Task = Task(
     id = id,
     name = name,
@@ -30,4 +32,6 @@ fun taskWith(
     createdAt = createdAt,
     updatedAt = updatedAt,
     snooze = snooze,
+    pausedAt = pausedAt,
+    archived = archived,
 )

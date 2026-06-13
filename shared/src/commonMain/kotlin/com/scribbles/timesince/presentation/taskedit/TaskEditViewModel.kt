@@ -8,6 +8,8 @@ import com.scribbles.timesince.domain.model.TaskFrequency
 import com.scribbles.timesince.domain.repository.TaskRepository
 import com.scribbles.timesince.domain.undo.UndoStore
 import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
+import com.scribbles.timesince.domain.usecase.SetArchivedUseCase
+import com.scribbles.timesince.domain.usecase.SetPausedUseCase
 import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
 import com.scribbles.timesince.domain.usecase.UndoTaskUseCase
 import com.scribbles.timesince.domain.usecase.UpdateTaskUseCase
@@ -24,6 +26,8 @@ class TaskEditViewModel(
     private val updateTask: UpdateTaskUseCase,
     private val snoozeTask: SnoozeTaskUseCase,
     private val undoTask: UndoTaskUseCase,
+    private val setPaused: SetPausedUseCase,
+    private val setArchived: SetArchivedUseCase,
     private val undoStore: UndoStore,
     private val syncCoordinator: SyncCoordinator? = null,
 ) : ViewModel() {
@@ -56,6 +60,8 @@ class TaskEditViewModel(
                     // Default the snooze unit to the task's own repetition unit.
                     snoozeUnit = task.frequency.unit,
                     canUndo = undoStore.hasSnapshot(taskId),
+                    isPaused = task.pausedAt != null,
+                    isArchived = task.archived,
                 )
             }
         }
@@ -108,6 +114,29 @@ class TaskEditViewModel(
             if (undone) {
                 syncCoordinator?.requestSync()
                 _state.update { it.copy(canUndo = false) }
+            }
+        }
+    }
+
+    fun onTogglePause() {
+        val id = editingTaskId ?: return
+        val pause = !_state.value.isPaused
+        viewModelScope.launch {
+            setPaused(id, pause)
+            syncCoordinator?.requestSync()
+            _state.update { it.copy(isPaused = pause) }
+        }
+    }
+
+    fun onToggleArchive() {
+        val id = editingTaskId ?: return
+        val archive = !_state.value.isArchived
+        viewModelScope.launch {
+            setArchived(id, archive)
+            syncCoordinator?.requestSync()
+            // Archiving overrides/clears pause.
+            _state.update {
+                it.copy(isArchived = archive, isPaused = if (archive) false else it.isPaused)
             }
         }
     }

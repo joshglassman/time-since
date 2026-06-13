@@ -7,6 +7,8 @@ import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
 import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
 import com.scribbles.timesince.domain.usecase.GetOverdueTasksUseCase
 import com.scribbles.timesince.domain.usecase.GetSortedTasksUseCase
+import com.scribbles.timesince.domain.usecase.SetArchivedUseCase
+import com.scribbles.timesince.domain.usecase.SetPausedUseCase
 import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
 import com.scribbles.timesince.domain.usecase.UndoTaskUseCase
 import com.scribbles.timesince.domain.usecase.UpdateTaskUseCase
@@ -32,6 +34,8 @@ val sharedModule: Module = module {
     factory { CompleteTaskUseCase(get(), get(), get()) }
     factory { SnoozeTaskUseCase(get(), get(), get(), get()) }
     factory { UndoTaskUseCase(get(), get()) }
+    factory { SetPausedUseCase(get(), get()) }
+    factory { SetArchivedUseCase(get()) }
     factory { CreateTaskUseCase(get(), get()) }
     factory { UpdateTaskUseCase(get()) }
     factory { DeleteTaskUseCase(get()) }

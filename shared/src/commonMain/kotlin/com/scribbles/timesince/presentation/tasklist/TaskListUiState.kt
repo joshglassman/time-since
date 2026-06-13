@@ -14,6 +14,8 @@ import kotlin.time.Instant
 data class TaskListUiState(
     val isLoading: Boolean = true,
     val tasks: List<TaskListItem> = emptyList(),
+    /** When true the list shows archived tasks instead of the active ones. */
+    val showingArchived: Boolean = false,
 )
 
 data class TaskListItem(
@@ -35,9 +37,14 @@ data class TaskListItem(
     val fillFraction: Float,
     /** True when the task carries an active snooze (shows the 💤 indicator). */
     val isSnoozed: Boolean,
+    /** True while the task is paused (frozen countdown + "paused" label). */
+    val isPaused: Boolean,
 )
 
 internal fun Task.toListItem(now: Instant, tz: TimeZone): TaskListItem {
+    // While paused the clock is frozen as of pausedAt, so all time-derived
+    // display (elapsed, status, fill, and the formatted label) uses that instant.
+    val evalNow = pausedAt ?: now
     val deadline = deadline(tz)
     val cycle = deadline - lastCompletedAt
     val elapsed = elapsedSinceCompleted(now)
@@ -52,8 +59,9 @@ internal fun Task.toListItem(now: Instant, tz: TimeZone): TaskListItem {
         status = status(now, tz),
         elapsed = elapsed,
         frequency = frequency,
-        displayText = TimeSinceFormatter.format(lastCompletedAt, now, tz, frequency),
+        displayText = TimeSinceFormatter.format(lastCompletedAt, evalNow, tz, frequency),
         fillFraction = fraction,
         isSnoozed = snooze > Duration.ZERO,
+        isPaused = pausedAt != null,
     )
 }

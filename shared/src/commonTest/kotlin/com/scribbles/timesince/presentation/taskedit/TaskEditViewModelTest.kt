@@ -5,6 +5,8 @@ import com.scribbles.timesince.domain.usecase.BASE_TIME
 import com.scribbles.timesince.domain.undo.UndoStore
 import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
 import com.scribbles.timesince.domain.usecase.FakeTaskRepository
+import com.scribbles.timesince.domain.usecase.SetArchivedUseCase
+import com.scribbles.timesince.domain.usecase.SetPausedUseCase
 import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
 import com.scribbles.timesince.domain.usecase.TestClock
 import com.scribbles.timesince.domain.usecase.UTC_PROVIDER
@@ -39,6 +41,8 @@ class TaskEditViewModelTest {
             updateTask = UpdateTaskUseCase(repository),
             snoozeTask = SnoozeTaskUseCase(repository, undoStore, clock, UTC_PROVIDER),
             undoTask = UndoTaskUseCase(repository, undoStore),
+            setPaused = SetPausedUseCase(repository, clock),
+            setArchived = SetArchivedUseCase(repository),
             undoStore = undoStore,
         )
     }
@@ -194,6 +198,37 @@ class TaskEditViewModelTest {
 
         assertEquals(kotlin.time.Duration.ZERO, repository.getById("a")!!.snooze)
         assertFalse(viewModel.state.value.canUndo)
+    }
+
+    @Test
+    fun pauseTogglePersistsAndUpdatesState() = runTest {
+        repository.create(taskWith(id = "a", frequencyAmount = 10, frequencyUnit = FrequencyUnit.DAYS))
+        viewModel.load("a")
+        assertFalse(viewModel.state.value.isPaused)
+
+        viewModel.onTogglePause()
+        assertTrue(viewModel.state.value.isPaused)
+        assertNotNull(repository.getById("a")!!.pausedAt)
+
+        viewModel.onTogglePause()
+        assertFalse(viewModel.state.value.isPaused)
+        assertEquals(null, repository.getById("a")!!.pausedAt)
+    }
+
+    @Test
+    fun archiveTogglePersistsAndClearsPausedState() = runTest {
+        repository.create(taskWith(id = "a", frequencyAmount = 10, frequencyUnit = FrequencyUnit.DAYS))
+        viewModel.load("a")
+        viewModel.onTogglePause()
+        assertTrue(viewModel.state.value.isPaused)
+
+        viewModel.onToggleArchive()
+
+        assertTrue(viewModel.state.value.isArchived)
+        assertFalse(viewModel.state.value.isPaused)
+        val task = repository.getById("a")!!
+        assertTrue(task.archived)
+        assertEquals(null, task.pausedAt)
     }
 
     @Test

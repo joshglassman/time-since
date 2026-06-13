@@ -61,6 +61,41 @@ class MarkdownExportImportTest {
     }
 
     @Test
+    fun roundTripPreservesPauseAndArchive() {
+        val tasks = listOf(
+            Task(
+                id = "990e8400-e29b-41d4-a716-446655440004",
+                name = "Paused and archived",
+                lastCompletedAt = Instant.parse("2026-04-08T10:30:00Z"),
+                frequency = TaskFrequency(2, FrequencyUnit.WEEKS),
+                createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+                pausedAt = Instant.parse("2026-04-10T08:00:00Z"),
+                archived = true,
+            ),
+        )
+        val markdown = MarkdownExporter.export(tasks)
+        assertTrue(markdown.contains("- paused: ${Instant.parse("2026-04-10T08:00:00Z").toEpochMilliseconds()}"))
+        assertTrue(markdown.contains("- archived: true"))
+        assertEquals(tasks, MarkdownImporter.import(markdown))
+    }
+
+    @Test
+    fun blockWithoutPauseOrArchiveImportsAsDefaults() {
+        val markdown = """
+            # Time Since Tasks
+
+            ## Plain
+            - frequency: 1 days
+            - last completed: 2026-04-08T10:30:00Z
+            - created: 2026-01-01T00:00:00Z
+            - id: id-1
+        """.trimIndent()
+        val task = MarkdownImporter.import(markdown).single()
+        assertEquals(null, task.pausedAt)
+        assertEquals(false, task.archived)
+    }
+
+    @Test
     fun blockWithoutSnoozeImportsAsZero() {
         val markdown = """
             # Time Since Tasks

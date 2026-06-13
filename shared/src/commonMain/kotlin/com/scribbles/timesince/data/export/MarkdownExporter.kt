@@ -32,6 +32,10 @@ object MarkdownExporter {
             if (task.snooze.isPositive()) {
                 appendLine("- snooze: ${task.snooze.inWholeMilliseconds}")
             }
+            task.pausedAt?.let { appendLine("- paused: ${it.toEpochMilliseconds()}") }
+            if (task.archived) {
+                appendLine("- archived: true")
+            }
             appendLine("- id: ${task.id}")
         }
     }
