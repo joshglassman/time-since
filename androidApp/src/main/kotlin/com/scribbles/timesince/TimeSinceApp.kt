@@ -12,6 +12,8 @@ import com.scribbles.timesince.di.sharedModule
 import com.scribbles.timesince.notification.NotificationHelper
 import com.scribbles.timesince.notification.OverdueCheckWorker
 import com.scribbles.timesince.sync.GoogleAuthHelper
+import androidx.glance.appwidget.updateAll
+import com.scribbles.timesince.widget.TimeSinceWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,6 +44,7 @@ class TimeSinceApp : Application() {
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
+                refreshWidget()
                 if (!authHelper.isSignedIn) return
                 appScope.launch {
                     val result = syncCoordinator.sync()
@@ -54,6 +57,9 @@ class TimeSinceApp : Application() {
                     }
                 }
             }
+
+            // Refresh the home-screen widget when the app goes to the background.
+            override fun onStop(owner: LifecycleOwner) = refreshWidget()
         })
 
         appScope.launch {
@@ -67,5 +73,9 @@ class TimeSinceApp : Application() {
                 }
             }
         }
+    }
+
+    private fun refreshWidget() {
+        appScope.launch { TimeSinceWidget().updateAll(this@TimeSinceApp) }
     }
 }

@@ -34,15 +34,9 @@ class TaskListViewModel(
         combine(getSortedTasks(), getCategories(), filter) { tasks, categories, activeFilter ->
             val now = clock.now()
             val tz = timeZoneProvider.current()
-            val byId = categories.associateBy { it.id }
             TaskListUiState(
                 isLoading = false,
-                tasks = tasks
-                    .filter { activeFilter.matches(it) }
-                    .map {
-                        val category = byId[it.categoryId]
-                        it.toListItem(now, tz, category?.colorHex, category?.icon)
-                    },
+                tasks = tasks.filter { activeFilter.matches(it) }.toListItems(now, tz, categories),
                 filter = activeFilter,
                 categories = categories.map { CategoryChip(it.id, it.name, it.colorHex, it.icon) },
             )

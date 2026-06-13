@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -87,14 +89,30 @@ fun TaskListScreen(
     onAddTask: () -> Unit,
     onEditTask: (String) -> Unit,
     onSettings: () -> Unit,
+    scrollToTaskId: String? = null,
+    onScrollConsumed: () -> Unit = {},
     viewModel: TaskListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
 
     // In a filtered view, back returns to the active tasks view; in the active
     // view it's disabled so the default back behavior (exit the app) applies.
     BackHandler(enabled = state.filter != TaskFilter.Active) {
         viewModel.onFilterSelected(TaskFilter.Active)
+    }
+
+    // Widget deep link: switch to the active view, then scroll to the task.
+    LaunchedEffect(scrollToTaskId) {
+        if (scrollToTaskId != null) viewModel.onFilterSelected(TaskFilter.Active)
+    }
+    LaunchedEffect(scrollToTaskId, state.tasks) {
+        val target = scrollToTaskId ?: return@LaunchedEffect
+        val index = state.tasks.indexOfFirst { it.id == target }
+        if (index >= 0) {
+            listState.animateScrollToItem(index)
+            onScrollConsumed()
+        }
     }
 
     var flashTick by remember { mutableStateOf(0) }
@@ -158,6 +176,7 @@ fun TaskListScreen(
             state = state,
             onCompleteTask = viewModel::onTaskCompleted,
             onEditTask = onEditTask,
+            listState = listState,
             flashTaskId = flashTaskId,
             flashTick = flashTick,
             contentPadding = padding,
@@ -170,6 +189,7 @@ private fun TaskListContent(
     state: TaskListUiState,
     onCompleteTask: (String) -> Unit,
     onEditTask: (String) -> Unit,
+    listState: LazyListState,
     flashTaskId: String?,
     flashTick: Int,
     contentPadding: PaddingValues,
@@ -189,6 +209,7 @@ private fun TaskListContent(
         }
 
         else -> LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 16.dp,

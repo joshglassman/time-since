@@ -1,5 +1,6 @@
 package com.scribbles.timesince.presentation.tasklist
 
+import com.scribbles.timesince.domain.model.Category
 import com.scribbles.timesince.domain.model.Task
 import com.scribbles.timesince.domain.model.TaskFrequency
 import com.scribbles.timesince.domain.model.TaskStatus
@@ -74,7 +75,19 @@ data class TaskListItem(
     val categoryIcon: String?,
 )
 
-internal fun Task.toListItem(
+/**
+ * Maps tasks to list items, attaching each task's category color/icon. Shared by
+ * the task-list ViewModel and the Glance home-screen widget.
+ */
+fun List<Task>.toListItems(now: Instant, tz: TimeZone, categories: List<Category>): List<TaskListItem> {
+    val byId = categories.associateBy { it.id }
+    return map {
+        val category = byId[it.categoryId]
+        it.toListItem(now, tz, category?.colorHex, category?.icon)
+    }
+}
+
+fun Task.toListItem(
     now: Instant,
     tz: TimeZone,
     categoryColorHex: String?,

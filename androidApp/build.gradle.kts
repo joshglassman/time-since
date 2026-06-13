@@ -67,6 +67,8 @@ dependencies {
     implementation(libs.emoji2.emojipicker)
     implementation(libs.room.runtime)
     implementation(libs.work.runtime.ktx)
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
     implementation(libs.kotlinx.coroutines.android)

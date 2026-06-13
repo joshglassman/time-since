@@ -5,4 +5,5 @@
     <string name="notification_channel_overdue_description">Persistent reminder when tasks are overdue</string>
     <string name="notification_overdue_title_one">1 task overdue</string>
     <string name="notification_overdue_title_many">%1$d tasks overdue</string>
+    <string name="widget_description">Your active tasks and how long since you last did them</string>
 </resources>

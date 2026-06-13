@@ -14,6 +14,7 @@ Built with **Kotlin Multiplatform** and **Compose Multiplatform**. The `:shared`
 - **Pause** a task to freeze its countdown, with a ⏸ indicator on the list, then resume right where it left off — no false overdue for time spent paused
 - **Archive** tasks to park them out of the active list (and bring them back unchanged)
 - **Categories** with a custom color and an emoji icon (picked from the system emoji picker), shown as a corner badge on each task; filter the list by category, paused, or archived from a dropdown
+- **Home-screen widget** (Glance) mirroring the active task list; tapping a task opens the app and scrolls to it
 - WorkManager-driven notifications for overdue tasks
 - Local-first storage via Room + bundled SQLite
 - Two-way Google Drive sync with conflict resolution
@@ -44,6 +45,7 @@ androidApp/   Android application
   di/           Android Koin bindings (Room DB, ViewModels, sync, notifications)
   notification/ OverdueCheckWorker + BootReceiver
   sync/         Google Drive sync implementation
+  widget/       Glance home-screen widget
 ```
 
 ## Dev environment setup

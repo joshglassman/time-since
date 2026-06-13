@@ -25,6 +25,8 @@ object Routes {
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
+    scrollToTaskId: String? = null,
+    onScrollConsumed: () -> Unit = {},
 ) {
     NavHost(
         navController = navController,
@@ -35,6 +37,8 @@ fun AppNavGraph(
                 onAddTask = { navController.navigate(Routes.TASK_NEW) },
                 onEditTask = { id -> navController.navigate(Routes.editTask(id)) },
                 onSettings = { navController.navigate(Routes.SETTINGS) },
+                scrollToTaskId = scrollToTaskId,
+                onScrollConsumed = onScrollConsumed,
             )
         }
         composable(Routes.TASK_NEW) {
