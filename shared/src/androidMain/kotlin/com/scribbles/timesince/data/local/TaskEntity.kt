@@ -15,4 +15,5 @@ data class TaskEntity(
     val snoozeMillis: Long = 0,
     val pausedAtEpochMillis: Long? = null,
     val archived: Boolean = false,
+    val categoryId: String? = null,
 )

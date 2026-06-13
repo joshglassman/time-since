@@ -26,6 +26,9 @@ data class Task(
     val pausedAt: Instant? = null,
     /** Parked tasks: excluded from the active list; overrides/clears pause. */
     val archived: Boolean = false,
+    /** Optional category id; `null` is uncategorized. Resolves to `null` if the
+     *  referenced [Category] no longer exists after a sync merge. */
+    val categoryId: String? = null,
 )
 
 /** "Now" for time evaluation: frozen at [Task.pausedAt] while paused. */

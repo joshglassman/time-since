@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.scribbles.timesince.data.export.MarkdownExporter
 import com.scribbles.timesince.data.export.MarkdownImporter
 import com.scribbles.timesince.data.sync.SyncCoordinator
+import com.scribbles.timesince.domain.repository.CategoryRepository
 import com.scribbles.timesince.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +13,7 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     private val repository: TaskRepository,
+    private val categoryRepository: CategoryRepository,
     private val syncCoordinator: SyncCoordinator? = null,
 ) : ViewModel() {
 
@@ -24,23 +26,28 @@ class SettingsViewModel(
 
     fun exportMarkdown(onResult: (String) -> Unit) {
         viewModelScope.launch {
-            val tasks = repository.getAll()
-            val markdown = MarkdownExporter.export(tasks)
+            val markdown = MarkdownExporter.export(repository.getAll(), categoryRepository.getAll())
             onResult(markdown)
         }
     }
 
     fun importMarkdown(markdown: String) {
         viewModelScope.launch {
-            val tasks = MarkdownImporter.import(markdown)
-            if (tasks.isEmpty()) {
+            val result = MarkdownImporter.importAll(markdown)
+            if (result.tasks.isEmpty() && result.categories.isEmpty()) {
                 _message.value = "No valid tasks found in file."
                 return@launch
             }
+            for (category in result.categories) {
+                if (categoryRepository.getById(category.id) != null) {
+                    categoryRepository.update(category)
+                } else {
+                    categoryRepository.create(category)
+                }
+            }
             var imported = 0
-            for (task in tasks) {
-                val existing = repository.getById(task.id)
-                if (existing != null) {
+            for (task in result.tasks) {
+                if (repository.getById(task.id) != null) {
                     repository.update(task)
                 } else {
                     repository.create(task)

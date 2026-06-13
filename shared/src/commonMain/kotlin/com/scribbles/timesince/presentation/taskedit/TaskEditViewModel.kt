@@ -8,6 +8,8 @@ import com.scribbles.timesince.domain.model.TaskFrequency
 import com.scribbles.timesince.domain.repository.TaskRepository
 import com.scribbles.timesince.domain.undo.UndoStore
 import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
+import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
+import com.scribbles.timesince.domain.usecase.GetCategoriesUseCase
 import com.scribbles.timesince.domain.usecase.SetArchivedUseCase
 import com.scribbles.timesince.domain.usecase.SetPausedUseCase
 import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
@@ -16,6 +18,7 @@ import com.scribbles.timesince.domain.usecase.UpdateTaskUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Instant
@@ -28,6 +31,8 @@ class TaskEditViewModel(
     private val undoTask: UndoTaskUseCase,
     private val setPaused: SetPausedUseCase,
     private val setArchived: SetArchivedUseCase,
+    private val deleteTask: DeleteTaskUseCase,
+    private val getCategories: GetCategoriesUseCase,
     private val undoStore: UndoStore,
     private val syncCoordinator: SyncCoordinator? = null,
 ) : ViewModel() {
@@ -38,17 +43,14 @@ class TaskEditViewModel(
     private var editingTaskId: String? = null
 
     fun load(taskId: String?) {
-        if (taskId == null) {
-            _state.value = TaskEditUiState(isNew = true)
-            editingTaskId = null
-            return
-        }
         editingTaskId = taskId
-        _state.update { it.copy(isLoading = true) }
+        _state.update { it.copy(isLoading = taskId != null) }
         viewModelScope.launch {
-            val task = repository.getById(taskId)
+            val categories = getCategories().first()
+            val task = taskId?.let { repository.getById(it) }
             if (task == null) {
-                _state.value = TaskEditUiState(isNew = true)
+                _state.value = TaskEditUiState(isNew = true, categories = categories)
+                editingTaskId = null
             } else {
                 _state.value = TaskEditUiState(
                     isLoading = false,
@@ -59,9 +61,11 @@ class TaskEditViewModel(
                     lastCompletedAt = task.lastCompletedAt,
                     // Default the snooze unit to the task's own repetition unit.
                     snoozeUnit = task.frequency.unit,
-                    canUndo = undoStore.hasSnapshot(taskId),
+                    canUndo = undoStore.hasSnapshot(task.id),
                     isPaused = task.pausedAt != null,
                     isArchived = task.archived,
+                    categoryId = task.categoryId,
+                    categories = categories,
                 )
             }
         }
@@ -141,6 +145,19 @@ class TaskEditViewModel(
         }
     }
 
+    fun onCategorySelected(categoryId: String?) {
+        _state.update { it.copy(categoryId = categoryId) }
+    }
+
+    fun onDelete() {
+        val id = editingTaskId ?: return
+        viewModelScope.launch {
+            deleteTask(id)
+            syncCoordinator?.requestSync()
+            _state.update { it.copy(deleted = true) }
+        }
+    }
+
     fun onSave() {
         val current = _state.value
         if (!current.canSave) return
@@ -151,7 +168,7 @@ class TaskEditViewModel(
         viewModelScope.launch {
             val id = editingTaskId
             if (id == null) {
-                createTask(current.name.trim(), frequency)
+                createTask(current.name.trim(), frequency, current.categoryId)
             } else {
                 val existing = repository.getById(id) ?: return@launch
                 updateTask(
@@ -159,6 +176,7 @@ class TaskEditViewModel(
                         name = current.name.trim(),
                         frequency = frequency,
                         lastCompletedAt = current.lastCompletedAt ?: existing.lastCompletedAt,
+                        categoryId = current.categoryId,
                     ),
                 )
             }

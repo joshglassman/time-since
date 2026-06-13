@@ -1,5 +1,6 @@
 package com.scribbles.timesince.ui.tasklist
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -8,6 +9,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,15 +26,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -57,11 +61,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.scribbles.timesince.domain.model.TaskStatus
+import com.scribbles.timesince.ui.components.CategoryCornerBadge
+import com.scribbles.timesince.ui.components.parseHexColor
+import com.scribbles.timesince.presentation.tasklist.CategoryChip
+import com.scribbles.timesince.presentation.tasklist.TaskFilter
 import com.scribbles.timesince.presentation.tasklist.TaskListItem
 import com.scribbles.timesince.presentation.tasklist.TaskListUiState
 import com.scribbles.timesince.presentation.tasklist.TaskListViewModel
@@ -81,7 +90,13 @@ fun TaskListScreen(
     viewModel: TaskListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var taskToDelete by remember { mutableStateOf<TaskListItem?>(null) }
+
+    // In a filtered view, back returns to the active tasks view; in the active
+    // view it's disabled so the default back behavior (exit the app) applies.
+    BackHandler(enabled = state.filter != TaskFilter.Active) {
+        viewModel.onFilterSelected(TaskFilter.Active)
+    }
+
     var flashTick by remember { mutableStateOf(0) }
     var flashTaskId by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -104,34 +119,27 @@ fun TaskListScreen(
         }
     }
 
-    taskToDelete?.let { task ->
-        AlertDialog(
-            onDismissRequest = { taskToDelete = null },
-            title = { Text("Delete task?") },
-            text = { Text("\"${task.name}\" will be permanently deleted.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.onTaskDeleted(task.id)
-                    taskToDelete = null
-                }) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { taskToDelete = null }) {
-                    Text("Cancel")
-                }
-            },
-        )
-    }
+    var filterMenuOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.showingArchived) "Archived" else "Time Since") },
+                title = { Text(filterTitle(state.filter, state.categories)) },
                 actions = {
-                    TextButton(onClick = viewModel::onToggleShowArchived) {
-                        Text(if (state.showingArchived) "Active" else "Archived")
+                    Box {
+                        IconButton(onClick = { filterMenuOpen = true }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                        }
+                        FilterMenu(
+                            expanded = filterMenuOpen,
+                            current = state.filter,
+                            categories = state.categories,
+                            onDismiss = { filterMenuOpen = false },
+                            onFilterSelected = {
+                                viewModel.onFilterSelected(it)
+                                filterMenuOpen = false
+                            },
+                        )
                     }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -141,10 +149,8 @@ fun TaskListScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (!state.showingArchived) {
-                FloatingActionButton(onClick = onAddTask) {
-                    Icon(Icons.Default.Add, contentDescription = "Add task")
-                }
+            FloatingActionButton(onClick = onAddTask) {
+                Icon(Icons.Default.Add, contentDescription = "Add task")
             }
         },
     ) { padding ->
@@ -152,7 +158,6 @@ fun TaskListScreen(
             state = state,
             onCompleteTask = viewModel::onTaskCompleted,
             onEditTask = onEditTask,
-            onDeleteTask = { task -> taskToDelete = task },
             flashTaskId = flashTaskId,
             flashTick = flashTick,
             contentPadding = padding,
@@ -165,49 +170,22 @@ private fun TaskListContent(
     state: TaskListUiState,
     onCompleteTask: (String) -> Unit,
     onEditTask: (String) -> Unit,
-    onDeleteTask: (TaskListItem) -> Unit,
     flashTaskId: String?,
     flashTick: Int,
     contentPadding: PaddingValues,
 ) {
     when {
         state.isLoading -> Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding),
+            modifier = Modifier.fillMaxSize().padding(contentPadding),
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator()
         }
 
         state.tasks.isEmpty() -> Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-                .padding(32.dp),
-            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize().padding(contentPadding),
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = if (state.showingArchived) "🗄" else "⏰",
-                    style = MaterialTheme.typography.displayLarge,
-                )
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = if (state.showingArchived) "No archived tasks" else "No tasks yet",
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = if (state.showingArchived) {
-                        "Tasks you archive will appear here."
-                    } else {
-                        "Long-press a task to mark it complete."
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            EmptyState(state.filter)
         }
 
         else -> LazyColumn(
@@ -225,10 +203,113 @@ private fun TaskListContent(
                     task = task,
                     onComplete = { onCompleteTask(task.id) },
                     onEdit = { onEditTask(task.id) },
-                    onDelete = { onDeleteTask(task) },
                     flashTick = if (flashTaskId == task.id) flashTick else 0,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun FilterMenu(
+    expanded: Boolean,
+    current: TaskFilter,
+    categories: List<CategoryChip>,
+    onDismiss: () -> Unit,
+    onFilterSelected: (TaskFilter) -> Unit,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        FilterMenuItem("Active", null, null, current == TaskFilter.Active) {
+            onFilterSelected(TaskFilter.Active)
+        }
+        categories.forEach { category ->
+            FilterMenuItem(
+                label = category.name,
+                icon = category.icon,
+                background = parseHexColor(category.colorHex),
+                selected = current == TaskFilter.Category(category.id),
+            ) { onFilterSelected(TaskFilter.Category(category.id)) }
+        }
+        FilterMenuItem("Paused", null, null, current == TaskFilter.Paused) {
+            onFilterSelected(TaskFilter.Paused)
+        }
+        FilterMenuItem("Archived", null, null, current == TaskFilter.Archived) {
+            onFilterSelected(TaskFilter.Archived)
+        }
+    }
+}
+
+@Composable
+private fun FilterMenuItem(
+    label: String,
+    icon: String?,
+    background: Color?,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val rowBackground = if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent
+
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = onClick,
+        trailingIcon = icon?.takeIf { it.isNotEmpty() }?.let {
+            {
+                // Only the icon chip carries the category color.
+                val chipColor = background ?: MaterialTheme.colorScheme.surfaceVariant
+                val onChip = if (chipColor.luminance() > 0.5f) Color.Black else Color.White
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(chipColor)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(it, color = onChip)
+                }
+            }
+        },
+        modifier = Modifier
+            .background(rowBackground)
+            .then(
+                if (selected) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary)
+                } else {
+                    Modifier
+                },
+            ),
+    )
+}
+
+private fun filterTitle(filter: TaskFilter, categories: List<CategoryChip>): String = when (filter) {
+    TaskFilter.Active -> "Time Since"
+    TaskFilter.Paused -> "Paused"
+    TaskFilter.Archived -> "Archived"
+    is TaskFilter.Category -> categories.firstOrNull { it.id == filter.id }
+        ?.let { "${it.icon} ${it.name}".trim() } ?: "Category"
+}
+
+@Composable
+private fun EmptyState(filter: TaskFilter) {
+    val (emoji, title, body) = when (filter) {
+        TaskFilter.Archived -> Triple("🗄", "No archived tasks", "Tasks you archive will appear here.")
+        TaskFilter.Paused -> Triple("⏸", "No paused tasks", "Paused tasks will appear here.")
+        is TaskFilter.Category -> Triple("🗂", "No tasks in this category", "Assign a category from a task's edit screen.")
+        TaskFilter.Active -> Triple("⏰", "No tasks yet", "Long-press a task to mark it complete.")
+    }
+    Box(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = emoji, style = MaterialTheme.typography.displayLarge)
+            Spacer(Modifier.height(16.dp))
+            Text(text = title, style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -239,7 +320,6 @@ private fun TaskCard(
     task: TaskListItem,
     onComplete: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
     flashTick: Int,
 ) {
     val statusLabel = when (task.status) {
@@ -281,7 +361,7 @@ private fun TaskCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, top = 12.dp, end = 4.dp),
+                        .padding(start = 16.dp, top = 12.dp, end = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     StatusDot(task.status, gradientColorAt(fraction))
@@ -314,17 +394,19 @@ private fun TaskCard(
                             }
                         }
                     }
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete ${task.name}",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                 }
                 TimeSinceBar(
                     fraction = fraction,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+                )
+            }
+
+            // Category corner badge in the top-right corner.
+            task.categoryColorHex?.let { hex ->
+                CategoryCornerBadge(
+                    colorHex = hex,
+                    icon = task.categoryIcon.orEmpty(),
+                    modifier = Modifier.align(Alignment.TopEnd),
                 )
             }
 

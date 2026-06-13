@@ -1,5 +1,7 @@
 package com.scribbles.timesince.data.sync
 
+import com.scribbles.timesince.domain.model.Category
+import com.scribbles.timesince.domain.model.DeletedCategoryTombstone
 import com.scribbles.timesince.domain.model.DeletedTaskTombstone
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.model.Task
@@ -7,6 +9,7 @@ import com.scribbles.timesince.domain.model.TaskFrequency
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -38,7 +41,7 @@ class SyncPayloadTest {
 
     @Test
     fun roundTripPreservesAllFields() {
-        val payload = SyncPayload.from(sample, emptyList(), syncTime)
+        val payload = SyncPayload.from(SyncSnapshot(tasks = sample), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(sample, decoded.toTasks())
@@ -46,7 +49,7 @@ class SyncPayloadTest {
 
     @Test
     fun emptyTaskListRoundTrips() {
-        val payload = SyncPayload.from(emptyList(), emptyList(), syncTime)
+        val payload = SyncPayload.from(SyncSnapshot(), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(emptyList(), decoded.toTasks())
@@ -82,7 +85,7 @@ class SyncPayloadTest {
 
     @Test
     fun syncedAtTimestampIsPreserved() {
-        val payload = SyncPayload.from(sample, emptyList(), syncTime)
+        val payload = SyncPayload.from(SyncSnapshot(tasks = sample), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(syncTime.toString(), decoded.syncedAt)
@@ -99,7 +102,7 @@ class SyncPayloadTest {
                 createdAt = syncTime,
                 updatedAt = syncTime,
             )
-            val payload = SyncPayload.from(listOf(task), emptyList(), syncTime)
+            val payload = SyncPayload.from(SyncSnapshot(tasks = listOf(task)), syncTime)
             val encoded = json.encodeToString(SyncPayload.serializer(), payload)
             val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
             assertEquals(listOf(task), decoded.toTasks())
@@ -140,7 +143,7 @@ class SyncPayloadTest {
             updatedAt = syncTime,
             snooze = 2.days,
         )
-        val payload = SyncPayload.from(listOf(task), emptyList(), syncTime)
+        val payload = SyncPayload.from(SyncSnapshot(tasks = listOf(task)), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(listOf(task), decoded.toTasks())
@@ -158,7 +161,7 @@ class SyncPayloadTest {
             pausedAt = Instant.parse("2026-04-09T09:00:00Z"),
             archived = true,
         )
-        val payload = SyncPayload.from(listOf(task), emptyList(), syncTime)
+        val payload = SyncPayload.from(SyncSnapshot(tasks = listOf(task)), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(listOf(task), decoded.toTasks())
@@ -217,9 +220,55 @@ class SyncPayloadTest {
         val tombstones = listOf(
             DeletedTaskTombstone("id-gone", Instant.parse("2026-04-09T09:00:00Z")),
         )
-        val payload = SyncPayload.from(sample, tombstones, syncTime)
+        val payload = SyncPayload.from(SyncSnapshot(tasks = sample, tombstones = tombstones), syncTime)
         val encoded = json.encodeToString(SyncPayload.serializer(), payload)
         val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
         assertEquals(tombstones, decoded.toTombstones())
+    }
+
+    @Test
+    fun categoriesAndCategoryIdAndCategoryTombstonesRoundTrip() {
+        val categories = listOf(
+            Category(id = "c1", name = "Work", colorHex = "#1e66f5", updatedAt = syncTime, icon = "💼"),
+        )
+        val task = sample.first().copy(categoryId = "c1")
+        val catTombstones = listOf(
+            DeletedCategoryTombstone("c-gone", Instant.parse("2026-04-09T09:00:00Z")),
+        )
+        val payload = SyncPayload.from(
+            SyncSnapshot(tasks = listOf(task), categories = categories, categoryTombstones = catTombstones),
+            syncTime,
+        )
+        val encoded = json.encodeToString(SyncPayload.serializer(), payload)
+        val decoded = json.decodeFromString(SyncPayload.serializer(), encoded)
+        assertEquals(categories, decoded.toCategories())
+        assertEquals("c1", decoded.toTasks().single().categoryId)
+        assertEquals(catTombstones, decoded.toCategoryTombstones())
+    }
+
+    @Test
+    fun v4PayloadWithoutCategoriesParsesAsEmptyAndNullCategoryId() {
+        val raw = """
+            {
+              "version": 4,
+              "syncedAt": "${syncTime}",
+              "tasks": [
+                {
+                  "id": "id-1",
+                  "name": "Legacy v4",
+                  "lastCompletedAt": "2026-04-08T10:30:00Z",
+                  "frequencyAmount": 2,
+                  "frequencyUnit": "DAYS",
+                  "createdAt": "2026-01-01T00:00:00Z",
+                  "updatedAt": "2026-04-08T10:30:00Z",
+                  "snoozeMillis": 0,
+                  "archived": false
+                }
+              ]
+            }
+        """.trimIndent()
+        val decoded = json.decodeFromString(SyncPayload.serializer(), raw)
+        assertEquals(emptyList(), decoded.toCategories())
+        assertNull(decoded.toTasks().single().categoryId)
     }
 }

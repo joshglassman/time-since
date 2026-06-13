@@ -46,6 +46,7 @@ import org.koin.compose.koinInject
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onManageCategories: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel(),
     authHelper: GoogleAuthHelper = koinInject(),
 ) {
@@ -136,6 +137,21 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Import tasks from Markdown")
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // --- Categories ---
+            Text(
+                text = "Categories",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onManageCategories, modifier = Modifier.fillMaxWidth()) {
+                Text("Manage categories")
             }
 
             Spacer(Modifier.height(24.dp))

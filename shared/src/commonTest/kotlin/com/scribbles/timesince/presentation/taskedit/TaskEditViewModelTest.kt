@@ -4,7 +4,10 @@ import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.domain.usecase.BASE_TIME
 import com.scribbles.timesince.domain.undo.UndoStore
 import com.scribbles.timesince.domain.usecase.CreateTaskUseCase
+import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
+import com.scribbles.timesince.domain.usecase.FakeCategoryRepository
 import com.scribbles.timesince.domain.usecase.FakeTaskRepository
+import com.scribbles.timesince.domain.usecase.GetCategoriesUseCase
 import com.scribbles.timesince.domain.usecase.SetArchivedUseCase
 import com.scribbles.timesince.domain.usecase.SetPausedUseCase
 import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
@@ -28,6 +31,7 @@ import kotlin.test.assertTrue
 class TaskEditViewModelTest {
 
     private val repository = FakeTaskRepository()
+    private val categoryRepository = FakeCategoryRepository()
     private val clock = TestClock(BASE_TIME)
     private val undoStore = UndoStore()
     private lateinit var viewModel: TaskEditViewModel
@@ -43,6 +47,8 @@ class TaskEditViewModelTest {
             undoTask = UndoTaskUseCase(repository, undoStore),
             setPaused = SetPausedUseCase(repository, clock),
             setArchived = SetArchivedUseCase(repository),
+            deleteTask = DeleteTaskUseCase(repository),
+            getCategories = GetCategoriesUseCase(categoryRepository),
             undoStore = undoStore,
         )
     }
@@ -229,6 +235,32 @@ class TaskEditViewModelTest {
         val task = repository.getById("a")!!
         assertTrue(task.archived)
         assertEquals(null, task.pausedAt)
+    }
+
+    @Test
+    fun deleteRemovesTaskAndSignalsDeleted() = runTest {
+        repository.create(taskWith(id = "a"))
+        viewModel.load("a")
+
+        viewModel.onDelete()
+
+        assertTrue(viewModel.state.value.deleted)
+        assertEquals(null, repository.getById("a"))
+    }
+
+    @Test
+    fun categorySelectionIsPersistedOnSave() = runTest {
+        categoryRepository.create(
+            com.scribbles.timesince.domain.model.Category("c1", "Work", "#1e66f5", BASE_TIME),
+        )
+        repository.create(taskWith(id = "a"))
+        viewModel.load("a")
+        assertTrue(viewModel.state.value.categories.any { it.id == "c1" })
+
+        viewModel.onCategorySelected("c1")
+        viewModel.onSave()
+
+        assertEquals("c1", repository.getById("a")?.categoryId)
     }
 
     @Test

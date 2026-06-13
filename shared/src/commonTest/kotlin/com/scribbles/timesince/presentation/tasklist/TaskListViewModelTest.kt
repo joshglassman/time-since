@@ -5,9 +5,10 @@ import com.scribbles.timesince.domain.model.TaskStatus
 import com.scribbles.timesince.domain.usecase.BASE_TIME
 import com.scribbles.timesince.domain.undo.UndoStore
 import com.scribbles.timesince.domain.usecase.CompleteTaskUseCase
-import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
+import com.scribbles.timesince.domain.usecase.FakeCategoryRepository
 import com.scribbles.timesince.domain.usecase.FakeTaskRepository
 import com.scribbles.timesince.domain.model.FrequencyUnit
+import com.scribbles.timesince.domain.usecase.GetCategoriesUseCase
 import com.scribbles.timesince.domain.usecase.GetSortedTasksUseCase
 import com.scribbles.timesince.domain.usecase.SnoozeTaskUseCase
 import com.scribbles.timesince.domain.usecase.TestClock
@@ -28,6 +29,7 @@ import kotlin.time.Duration.Companion.days
 class TaskListViewModelTest {
 
     private val repository = FakeTaskRepository()
+    private val categoryRepository = FakeCategoryRepository()
     private val clock = TestClock(BASE_TIME)
     private val undoStore = UndoStore()
     private lateinit var viewModel: TaskListViewModel
@@ -37,8 +39,8 @@ class TaskListViewModelTest {
         installMainDispatcher()
         viewModel = TaskListViewModel(
             getSortedTasks = GetSortedTasksUseCase(repository, clock, UTC_PROVIDER),
+            getCategories = GetCategoriesUseCase(categoryRepository),
             completeTask = CompleteTaskUseCase(repository, clock, undoStore),
-            deleteTask = DeleteTaskUseCase(repository),
             undoTask = UndoTaskUseCase(repository, undoStore),
             clock = clock,
             timeZoneProvider = UTC_PROVIDER,
@@ -160,7 +162,7 @@ class TaskListViewModelTest {
     }
 
     @Test
-    fun archivedTasksAreHiddenFromActiveListAndShownWhenToggled() = runTest {
+    fun activeFilterHidesArchivedAndArchivedFilterShowsThem() = runTest {
         repository.create(taskWith(id = "active", name = "Active"))
         repository.create(taskWith(id = "arch", name = "Archived", archived = true))
 
@@ -169,11 +171,44 @@ class TaskListViewModelTest {
             while (current.isLoading) current = awaitItem()
             // Active view: only the non-archived task.
             assertEquals(listOf("active"), current.tasks.map { it.id })
-            assertFalse(current.showingArchived)
+            assertEquals(TaskFilter.Active, current.filter)
 
-            viewModel.onToggleShowArchived()
-            while (!current.showingArchived) current = awaitItem()
+            viewModel.onFilterSelected(TaskFilter.Archived)
+            while (current.filter != TaskFilter.Archived) current = awaitItem()
             assertEquals(listOf("arch"), current.tasks.map { it.id })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun categoryFilterShowsOnlyTasksInThatCategory() = runTest {
+        repository.create(taskWith(id = "work").copy(categoryId = "c1"))
+        repository.create(taskWith(id = "home").copy(categoryId = "c2"))
+        repository.create(taskWith(id = "none"))
+
+        viewModel.state.test {
+            var current = awaitItem()
+            while (current.isLoading) current = awaitItem()
+
+            viewModel.onFilterSelected(TaskFilter.Category("c1"))
+            while (current.filter != TaskFilter.Category("c1")) current = awaitItem()
+            assertEquals(listOf("work"), current.tasks.map { it.id })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun categoryColorIsAttachedToListItems() = runTest {
+        categoryRepository.create(
+            com.scribbles.timesince.domain.model.Category("c1", "Work", "#1e66f5", BASE_TIME),
+        )
+        repository.create(taskWith(id = "work").copy(categoryId = "c1"))
+
+        viewModel.state.test {
+            var current = awaitItem()
+            while (current.isLoading || current.tasks.isEmpty()) current = awaitItem()
+            assertEquals("#1e66f5", current.tasks.single().categoryColorHex)
+            assertTrue(current.categories.any { it.id == "c1" })
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -186,24 +221,6 @@ class TaskListViewModelTest {
             var current = awaitItem()
             while (current.isLoading) current = awaitItem()
             assertTrue(current.tasks.single().isPaused)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun onTaskDeletedRemovesFromRepository() = runTest {
-        repository.create(taskWith(id = "a"))
-        repository.create(taskWith(id = "b"))
-
-        viewModel.onTaskDeleted("a")
-
-        viewModel.state.test {
-            var current = awaitItem()
-            while (current.isLoading || current.tasks.size != 1) {
-                current = awaitItem()
-            }
-            assertEquals("b", current.tasks[0].id)
-            assertFalse(current.isLoading)
             cancelAndIgnoreRemainingEvents()
         }
     }

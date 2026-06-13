@@ -1,7 +1,9 @@
 package com.scribbles.timesince.ui.taskedit
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,10 +12,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -41,11 +45,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.scribbles.timesince.domain.model.Category
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import com.scribbles.timesince.presentation.taskedit.TaskEditViewModel
+import com.scribbles.timesince.ui.components.parseHexColor
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -70,8 +77,8 @@ fun TaskEditScreen(
         viewModel.load(taskId)
     }
 
-    LaunchedEffect(state.saved) {
-        if (state.saved) onBack()
+    LaunchedEffect(state.saved, state.deleted) {
+        if (state.saved || state.deleted) onBack()
     }
 
     Scaffold(
@@ -97,6 +104,8 @@ fun TaskEditScreen(
             lastCompletedAt = state.lastCompletedAt,
             snoozeAmount = state.snoozeAmount,
             snoozeUnit = state.snoozeUnit,
+            categoryId = state.categoryId,
+            categories = state.categories,
             canSave = state.canSave,
             canSnooze = state.canSnooze,
             canUndo = state.canUndo,
@@ -106,6 +115,8 @@ fun TaskEditScreen(
             onFrequencyAmountChanged = viewModel::onFrequencyAmountChanged,
             onFrequencyUnitChanged = viewModel::onFrequencyUnitChanged,
             onLastCompletedAtChanged = viewModel::onLastCompletedAtChanged,
+            onCategorySelected = viewModel::onCategorySelected,
+            onDelete = viewModel::onDelete,
             onSnoozeAmountChanged = viewModel::onSnoozeAmountChanged,
             onSnoozeUnitChanged = viewModel::onSnoozeUnitChanged,
             onSnooze = viewModel::onSnooze,
@@ -128,6 +139,8 @@ private fun TaskEditForm(
     lastCompletedAt: Instant?,
     snoozeAmount: String,
     snoozeUnit: FrequencyUnit,
+    categoryId: String?,
+    categories: List<Category>,
     canSave: Boolean,
     canSnooze: Boolean,
     canUndo: Boolean,
@@ -137,6 +150,8 @@ private fun TaskEditForm(
     onFrequencyAmountChanged: (String) -> Unit,
     onFrequencyUnitChanged: (FrequencyUnit) -> Unit,
     onLastCompletedAtChanged: (Instant) -> Unit,
+    onCategorySelected: (String?) -> Unit,
+    onDelete: () -> Unit,
     onSnoozeAmountChanged: (String) -> Unit,
     onSnoozeUnitChanged: (FrequencyUnit) -> Unit,
     onSnooze: () -> Unit,
@@ -184,6 +199,13 @@ private fun TaskEditForm(
                 modifier = Modifier.weight(1f),
             )
         }
+
+        Text("Category", style = MaterialTheme.typography.labelLarge)
+        CategoryDropdown(
+            categories = categories,
+            selectedId = categoryId,
+            onSelected = onCategorySelected,
+        )
 
         if (!isNew && lastCompletedAt != null) {
             LastCompletedRow(
@@ -254,6 +276,35 @@ private fun TaskEditForm(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(if (isArchived) "Unarchive" else "Archive")
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            var confirmDelete by remember { mutableStateOf(false) }
+            OutlinedButton(
+                onClick = { confirmDelete = true },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Delete task")
+            }
+            if (confirmDelete) {
+                AlertDialog(
+                    onDismissRequest = { confirmDelete = false },
+                    title = { Text("Delete task?") },
+                    text = { Text("\"${name}\" will be permanently deleted.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            confirmDelete = false
+                            onDelete()
+                        }) { Text("Delete") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+                    },
+                )
             }
         }
     }
@@ -420,3 +471,61 @@ private val FrequencyUnit.label: String
         FrequencyUnit.MONTHS -> "Months"
         FrequencyUnit.YEARS -> "Years"
     }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryDropdown(
+    categories: List<Category>,
+    selectedId: String?,
+    onSelected: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = categories.firstOrNull { it.id == selectedId }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier,
+    ) {
+        OutlinedTextField(
+            value = selected?.let { "${it.icon} ${it.name}".trim() } ?: "None",
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .menuAnchor(
+                    androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                    enabled = true,
+                )
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("None") },
+                onClick = {
+                    onSelected(null)
+                    expanded = false
+                },
+            )
+            categories.forEach { category ->
+                DropdownMenuItem(
+                    text = { Text("${category.icon} ${category.name}".trim()) },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(parseHexColor(category.colorHex)),
+                        )
+                    },
+                    onClick = {
+                        onSelected(category.id)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}

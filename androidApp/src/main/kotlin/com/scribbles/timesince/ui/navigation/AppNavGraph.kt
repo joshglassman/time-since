@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.scribbles.timesince.ui.categories.CategoriesScreen
 import com.scribbles.timesince.ui.settings.SettingsScreen
 import com.scribbles.timesince.ui.taskedit.TaskEditScreen
 import com.scribbles.timesince.ui.tasklist.TaskListScreen
@@ -16,6 +17,7 @@ object Routes {
     const val TASK_NEW = "tasks/new"
     const val TASK_EDIT = "tasks/edit/{taskId}"
     const val SETTINGS = "settings"
+    const val CATEGORIES = "categories"
 
     fun editTask(taskId: String): String = "tasks/edit/$taskId"
 }
@@ -42,7 +44,13 @@ fun AppNavGraph(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onManageCategories = { navController.navigate(Routes.CATEGORIES) },
+            )
+        }
+        composable(Routes.CATEGORIES) {
+            CategoriesScreen(onBack = { navController.popBackStack() })
         }
         composable(
             route = Routes.TASK_EDIT,

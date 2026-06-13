@@ -1,5 +1,6 @@
 package com.scribbles.timesince.presentation.taskedit
 
+import com.scribbles.timesince.domain.model.Category
 import com.scribbles.timesince.domain.model.FrequencyUnit
 import kotlin.time.Instant
 
@@ -15,7 +16,10 @@ data class TaskEditUiState(
     val canUndo: Boolean = false,
     val isPaused: Boolean = false,
     val isArchived: Boolean = false,
+    val categoryId: String? = null,
+    val categories: List<Category> = emptyList(),
     val saved: Boolean = false,
+    val deleted: Boolean = false,
 ) {
     val canSave: Boolean
         get() = name.isNotBlank() && (frequencyAmount.toIntOrNull() ?: 0) > 0

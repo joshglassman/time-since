@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.process)
     implementation(libs.core.ktx)
+    implementation(libs.emoji2.emojipicker)
     implementation(libs.room.runtime)
     implementation(libs.work.runtime.ktx)
     implementation(libs.koin.android)

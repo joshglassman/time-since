@@ -4,8 +4,6 @@ import com.scribbles.timesince.data.sync.SyncDataSource
 import com.scribbles.timesince.data.sync.SyncPayload
 import com.scribbles.timesince.data.sync.SyncResult
 import com.scribbles.timesince.data.sync.SyncSnapshot
-import com.scribbles.timesince.domain.model.DeletedTaskTombstone
-import com.scribbles.timesince.domain.model.Task
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -25,13 +23,10 @@ class GoogleDriveSyncDataSource(
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
-    override suspend fun upload(
-        tasks: List<Task>,
-        tombstones: List<DeletedTaskTombstone>,
-    ): SyncResult = withContext(Dispatchers.IO) {
+    override suspend fun upload(snapshot: SyncSnapshot): SyncResult = withContext(Dispatchers.IO) {
         val token = tokenProvider() ?: return@withContext SyncResult.Error("Not signed in.")
         try {
-            val payload = SyncPayload.from(tasks, tombstones, clock.now())
+            val payload = SyncPayload.from(snapshot, clock.now())
             val body = json.encodeToString(SyncPayload.serializer(), payload)
 
             val fileId = findSyncFileId(token)
@@ -40,7 +35,7 @@ class GoogleDriveSyncDataSource(
             } else {
                 createFile(token, body)
             }
-            SyncResult.Success(tasks.size)
+            SyncResult.Success(snapshot.tasks.size)
         } catch (e: Exception) {
             SyncResult.Error(e.message ?: "Upload failed.")
         }
@@ -60,6 +55,8 @@ class GoogleDriveSyncDataSource(
             val snapshot = SyncSnapshot(
                 tasks = payload.toTasks(),
                 tombstones = payload.toTombstones(),
+                categories = payload.toCategories(),
+                categoryTombstones = payload.toCategoryTombstones(),
             )
             Pair(SyncResult.Success(snapshot.tasks.size), snapshot)
         } catch (e: Exception) {

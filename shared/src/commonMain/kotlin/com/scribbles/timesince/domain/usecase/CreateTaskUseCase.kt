@@ -12,7 +12,7 @@ class CreateTaskUseCase(
     private val clock: Clock = Clock.System,
 ) {
     @OptIn(ExperimentalUuidApi::class)
-    suspend operator fun invoke(name: String, frequency: TaskFrequency) {
+    suspend operator fun invoke(name: String, frequency: TaskFrequency, categoryId: String? = null) {
         val now = clock.now()
         val task = Task(
             id = Uuid.random().toString(),
@@ -20,6 +20,7 @@ class CreateTaskUseCase(
             lastCompletedAt = now,
             frequency = frequency,
             createdAt = now,
+            categoryId = categoryId,
         )
         repository.create(task)
     }

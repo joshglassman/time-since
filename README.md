@@ -13,6 +13,7 @@ Built with **Kotlin Multiplatform** and **Compose Multiplatform**. The `:shared`
 - **Undo** an accidental completion or snooze (from a Snackbar or the edit screen)
 - **Pause** a task to freeze its countdown, with a ⏸ indicator on the list, then resume right where it left off — no false overdue for time spent paused
 - **Archive** tasks to park them out of the active list (and bring them back unchanged)
+- **Categories** with a custom color and an emoji icon (picked from the system emoji picker), shown as a corner badge on each task; filter the list by category, paused, or archived from a dropdown
 - WorkManager-driven notifications for overdue tasks
 - Local-first storage via Room + bundled SQLite
 - Two-way Google Drive sync with conflict resolution

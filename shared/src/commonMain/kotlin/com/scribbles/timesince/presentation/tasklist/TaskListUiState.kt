@@ -11,11 +11,40 @@ import kotlinx.datetime.TimeZone
 import kotlin.time.Duration
 import kotlin.time.Instant
 
+/** Which slice of tasks the list is showing. Default is [Active]. */
+sealed interface TaskFilter {
+    /** All non-archived tasks. */
+    data object Active : TaskFilter
+
+    /** Non-archived, currently paused tasks. */
+    data object Paused : TaskFilter
+
+    /** Archived tasks. */
+    data object Archived : TaskFilter
+
+    /** Non-archived tasks with the given [id] (`null` = uncategorized). */
+    data class Category(val id: String?) : TaskFilter
+
+    fun matches(task: Task): Boolean = when (this) {
+        Active -> !task.archived
+        Paused -> !task.archived && task.pausedAt != null
+        Archived -> task.archived
+        is Category -> !task.archived && task.categoryId == id
+    }
+}
+
+data class CategoryChip(
+    val id: String,
+    val name: String,
+    val colorHex: String,
+    val icon: String,
+)
+
 data class TaskListUiState(
     val isLoading: Boolean = true,
     val tasks: List<TaskListItem> = emptyList(),
-    /** When true the list shows archived tasks instead of the active ones. */
-    val showingArchived: Boolean = false,
+    val filter: TaskFilter = TaskFilter.Active,
+    val categories: List<CategoryChip> = emptyList(),
 )
 
 data class TaskListItem(
@@ -39,9 +68,18 @@ data class TaskListItem(
     val isSnoozed: Boolean,
     /** True while the task is paused (frozen countdown + "paused" label). */
     val isPaused: Boolean,
+    /** Hex color of the task's category for the corner badge; `null` = uncategorized. */
+    val categoryColorHex: String?,
+    /** Emoji of the task's category for the corner badge; `""`/`null` = none. */
+    val categoryIcon: String?,
 )
 
-internal fun Task.toListItem(now: Instant, tz: TimeZone): TaskListItem {
+internal fun Task.toListItem(
+    now: Instant,
+    tz: TimeZone,
+    categoryColorHex: String?,
+    categoryIcon: String?,
+): TaskListItem {
     // While paused the clock is frozen as of pausedAt, so all time-derived
     // display (elapsed, status, fill, and the formatted label) uses that instant.
     val evalNow = pausedAt ?: now
@@ -63,5 +101,7 @@ internal fun Task.toListItem(now: Instant, tz: TimeZone): TaskListItem {
         fillFraction = fraction,
         isSnoozed = snooze > Duration.ZERO,
         isPaused = pausedAt != null,
+        categoryColorHex = categoryColorHex,
+        categoryIcon = categoryIcon,
     )
 }

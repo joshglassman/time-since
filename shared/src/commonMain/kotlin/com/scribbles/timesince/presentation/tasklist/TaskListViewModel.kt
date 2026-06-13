@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.scribbles.timesince.data.sync.SyncCoordinator
 import com.scribbles.timesince.domain.usecase.CompleteTaskUseCase
-import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
+import com.scribbles.timesince.domain.usecase.GetCategoriesUseCase
 import com.scribbles.timesince.domain.usecase.GetSortedTasksUseCase
 import com.scribbles.timesince.domain.usecase.UndoTaskUseCase
 import com.scribbles.timesince.domain.time.TimeZoneProvider
@@ -20,30 +20,38 @@ import kotlin.time.Clock
 
 class TaskListViewModel(
     private val getSortedTasks: GetSortedTasksUseCase,
+    private val getCategories: GetCategoriesUseCase,
     private val completeTask: CompleteTaskUseCase,
-    private val deleteTask: DeleteTaskUseCase,
     private val undoTask: UndoTaskUseCase,
     private val syncCoordinator: SyncCoordinator? = null,
     private val clock: Clock = Clock.System,
     private val timeZoneProvider: TimeZoneProvider = TimeZoneProvider.System,
 ) : ViewModel() {
 
-    private val showArchived = MutableStateFlow(false)
+    private val filter = MutableStateFlow<TaskFilter>(TaskFilter.Active)
 
-    val state: StateFlow<TaskListUiState> = combine(getSortedTasks(), showArchived) { tasks, archived ->
-        val now = clock.now()
-        val tz = timeZoneProvider.current()
-        TaskListUiState(
-            isLoading = false,
-            tasks = tasks.filter { it.archived == archived }.map { it.toListItem(now, tz) },
-            showingArchived = archived,
-        )
-    }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = TaskListUiState(),
-        )
+    val state: StateFlow<TaskListUiState> =
+        combine(getSortedTasks(), getCategories(), filter) { tasks, categories, activeFilter ->
+            val now = clock.now()
+            val tz = timeZoneProvider.current()
+            val byId = categories.associateBy { it.id }
+            TaskListUiState(
+                isLoading = false,
+                tasks = tasks
+                    .filter { activeFilter.matches(it) }
+                    .map {
+                        val category = byId[it.categoryId]
+                        it.toListItem(now, tz, category?.colorHex, category?.icon)
+                    },
+                filter = activeFilter,
+                categories = categories.map { CategoryChip(it.id, it.name, it.colorHex, it.icon) },
+            )
+        }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = TaskListUiState(),
+            )
 
     private val _completedTaskEvents = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val completedTaskEvents: SharedFlow<String> = _completedTaskEvents
@@ -56,13 +64,6 @@ class TaskListViewModel(
         }
     }
 
-    fun onTaskDeleted(taskId: String) {
-        viewModelScope.launch {
-            deleteTask(taskId)
-            syncCoordinator?.requestSync()
-        }
-    }
-
     /** Reverts the most recent completion of [taskId] (e.g. from the Snackbar). */
     fun onUndoComplete(taskId: String) {
         viewModelScope.launch {
@@ -71,8 +72,7 @@ class TaskListViewModel(
         }
     }
 
-    /** Toggles between the active list and the archived-tasks view. */
-    fun onToggleShowArchived() {
-        showArchived.value = !showArchived.value
+    fun onFilterSelected(newFilter: TaskFilter) {
+        filter.value = newFilter
     }
 }

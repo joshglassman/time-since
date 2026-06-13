@@ -111,6 +111,57 @@ class MarkdownExportImportTest {
     }
 
     @Test
+    fun roundTripPreservesCategoriesAndCategoryId() {
+        val categories = listOf(
+            com.scribbles.timesince.domain.model.Category(
+                id = "cat-1",
+                name = "Work stuff",
+                colorHex = "#1e66f5",
+                updatedAt = Instant.parse("2026-03-01T00:00:00Z"),
+            ),
+        )
+        val tasks = listOf(
+            Task(
+                id = "aa0e8400-e29b-41d4-a716-446655440005",
+                name = "Categorized",
+                lastCompletedAt = Instant.parse("2026-04-08T10:30:00Z"),
+                frequency = TaskFrequency(1, FrequencyUnit.WEEKS),
+                createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+                categoryId = "cat-1",
+            ),
+        )
+        val markdown = MarkdownExporter.export(tasks, categories)
+        assertTrue(markdown.contains("## Categories"))
+        assertTrue(markdown.contains("- category: cat-1"))
+
+        val result = MarkdownImporter.importAll(markdown)
+        assertEquals(categories, result.categories)
+        assertEquals(tasks, result.tasks)
+    }
+
+    @Test
+    fun roundTripPreservesCategoryIconAndEmptyIcon() {
+        val categories = listOf(
+            com.scribbles.timesince.domain.model.Category(
+                id = "cat-emoji",
+                name = "Home",
+                colorHex = "#40a02b",
+                updatedAt = Instant.parse("2026-03-01T00:00:00Z"),
+                icon = "🏠",
+            ),
+            com.scribbles.timesince.domain.model.Category(
+                id = "cat-none",
+                name = "No icon",
+                colorHex = "#1e66f5",
+                updatedAt = Instant.parse("2026-03-01T00:00:00Z"),
+                icon = "",
+            ),
+        )
+        val markdown = MarkdownExporter.export(emptyList(), categories)
+        assertEquals(categories, MarkdownImporter.importAll(markdown).categories)
+    }
+
+    @Test
     fun roundTripPreservesYearsFrequency() {
         val tasks = listOf(
             Task(
