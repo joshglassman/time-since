@@ -8,6 +8,7 @@ import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
 import com.scribbles.timesince.domain.usecase.FakeTaskRepository
 import com.scribbles.timesince.domain.usecase.GetSortedTasksUseCase
 import com.scribbles.timesince.domain.usecase.TestClock
+import com.scribbles.timesince.domain.usecase.UTC_PROVIDER
 import com.scribbles.timesince.domain.usecase.taskWith
 import com.scribbles.timesince.presentation.installMainDispatcher
 import com.scribbles.timesince.presentation.uninstallMainDispatcher
@@ -30,10 +31,11 @@ class TaskListViewModelTest {
     fun setUp() {
         installMainDispatcher()
         viewModel = TaskListViewModel(
-            getSortedTasks = GetSortedTasksUseCase(repository, clock),
+            getSortedTasks = GetSortedTasksUseCase(repository, clock, UTC_PROVIDER),
             completeTask = CompleteTaskUseCase(repository, clock),
             deleteTask = DeleteTaskUseCase(repository),
             clock = clock,
+            timeZoneProvider = UTC_PROVIDER,
         )
     }
 
@@ -76,7 +78,7 @@ class TaskListViewModelTest {
             }
             assertEquals(1, current.tasks.size)
             assertEquals(TaskStatus.OVERDUE, current.tasks[0].status)
-            assertTrue(current.tasks[0].elapsed > current.tasks[0].frequency.toDuration())
+            assertTrue(current.tasks[0].elapsed > current.tasks[0].frequency.approxDuration())
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -331,4 +331,5 @@ private val FrequencyUnit.label: String
         FrequencyUnit.DAYS -> "Days"
         FrequencyUnit.WEEKS -> "Weeks"
         FrequencyUnit.MONTHS -> "Months"
+        FrequencyUnit.YEARS -> "Years"
     }

@@ -42,6 +42,22 @@ class MarkdownExportImportTest {
     }
 
     @Test
+    fun roundTripPreservesYearsFrequency() {
+        val tasks = listOf(
+            Task(
+                id = "770e8400-e29b-41d4-a716-446655440002",
+                name = "Replace smoke detector battery",
+                lastCompletedAt = Instant.parse("2026-02-01T08:00:00Z"),
+                frequency = TaskFrequency(1, FrequencyUnit.YEARS),
+                createdAt = Instant.parse("2026-02-01T08:00:00Z"),
+            ),
+        )
+        val markdown = MarkdownExporter.export(tasks)
+        assertTrue(markdown.contains("frequency: 1 years"))
+        assertEquals(tasks, MarkdownImporter.import(markdown))
+    }
+
+    @Test
     fun roundTripSingleTask() {
         val single = listOf(sample.first())
         val parsed = MarkdownImporter.import(MarkdownExporter.export(single))

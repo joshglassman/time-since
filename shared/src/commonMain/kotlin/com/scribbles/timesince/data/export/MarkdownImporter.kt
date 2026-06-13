@@ -89,6 +89,7 @@ object MarkdownImporter {
         "DAYS" -> FrequencyUnit.DAYS
         "WEEKS" -> FrequencyUnit.WEEKS
         "MONTHS" -> FrequencyUnit.MONTHS
+        "YEARS" -> FrequencyUnit.YEARS
         else -> null
     }
 

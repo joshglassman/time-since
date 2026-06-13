@@ -11,7 +11,7 @@ class GetSortedTasksUseCaseTest {
 
     private val repository = FakeTaskRepository()
     private val clock = TestClock(BASE_TIME + 3.days)
-    private val useCase = GetSortedTasksUseCase(repository, clock)
+    private val useCase = GetSortedTasksUseCase(repository, clock, UTC_PROVIDER)
 
     @Test
     fun sortsByRemainingTimeAscending() = runTest {

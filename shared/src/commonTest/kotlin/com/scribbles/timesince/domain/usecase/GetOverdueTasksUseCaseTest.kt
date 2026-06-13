@@ -10,7 +10,7 @@ class GetOverdueTasksUseCaseTest {
 
     private val repository = FakeTaskRepository()
     private val clock = TestClock(BASE_TIME + 10.days)
-    private val useCase = GetOverdueTasksUseCase(repository, clock)
+    private val useCase = GetOverdueTasksUseCase(repository, clock, UTC_PROVIDER)
 
     @Test
     fun returnsOnlyOverdueTasks() = runTest {

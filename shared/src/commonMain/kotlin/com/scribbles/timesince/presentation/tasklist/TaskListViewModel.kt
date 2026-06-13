@@ -6,6 +6,7 @@ import com.scribbles.timesince.data.sync.SyncCoordinator
 import com.scribbles.timesince.domain.usecase.CompleteTaskUseCase
 import com.scribbles.timesince.domain.usecase.DeleteTaskUseCase
 import com.scribbles.timesince.domain.usecase.GetSortedTasksUseCase
+import com.scribbles.timesince.domain.time.TimeZoneProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,14 +22,16 @@ class TaskListViewModel(
     private val deleteTask: DeleteTaskUseCase,
     private val syncCoordinator: SyncCoordinator? = null,
     private val clock: Clock = Clock.System,
+    private val timeZoneProvider: TimeZoneProvider = TimeZoneProvider.System,
 ) : ViewModel() {
 
     val state: StateFlow<TaskListUiState> = getSortedTasks()
         .map { tasks ->
             val now = clock.now()
+            val tz = timeZoneProvider.current()
             TaskListUiState(
                 isLoading = false,
-                tasks = tasks.map { it.toListItem(now) },
+                tasks = tasks.map { it.toListItem(now, tz) },
             )
         }
         .stateIn(

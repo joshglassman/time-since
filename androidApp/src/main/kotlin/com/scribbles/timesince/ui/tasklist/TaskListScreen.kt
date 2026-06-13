@@ -57,7 +57,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.scribbles.timesince.domain.model.TaskStatus
-import com.scribbles.timesince.presentation.format.TimeSinceFormatter
 import com.scribbles.timesince.presentation.tasklist.TaskListItem
 import com.scribbles.timesince.presentation.tasklist.TaskListUiState
 import com.scribbles.timesince.presentation.tasklist.TaskListViewModel
@@ -220,8 +219,8 @@ private fun TaskCard(
         TaskStatus.DUE_SOON -> "due soon"
         TaskStatus.OVERDUE -> "overdue"
     }
-    val displayText = TimeSinceFormatter.format(task.elapsed, task.frequency)
-    val fraction = (task.elapsed / task.frequency.toDuration()).toFloat().coerceIn(0f, 1f)
+    val displayText = task.displayText
+    val fraction = task.fillFraction
 
     var showCheck by remember { mutableStateOf(false) }
     LaunchedEffect(flashTick) {
